@@ -8,7 +8,7 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration
 fun main() {
     Lwjgl3Application(AStar(), Lwjgl3ApplicationConfiguration().apply {
         setTitle("AStar")
-        setWindowedMode(640, 480)
+        setWindowedMode(16*32, 9*32)
         setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png")
     })
 }
