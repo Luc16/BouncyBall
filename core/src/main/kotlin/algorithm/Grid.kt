@@ -2,7 +2,9 @@ package algorithm
 
 import kotlin.math.abs
 
-private class Node(val pos: List<Int>) {
+class Position(val line: Int, val col: Int)
+
+private class Node(val pos: Position) {
     var parent: Node? = null
     var hCost: Int = 0
     var gCost: Int = 0
@@ -21,36 +23,29 @@ private class Node(val pos: List<Int>) {
 }
 
 class Grid(
-    private val sizeX: Int, private val sizeY: Int,
-    notTraversable: List<List<Int>> = listOf()
+    private val sizeX: Int,
+    private val sizeY: Int,
 ) {
-    private val grid: Array<Array<Node>> = Array(sizeY){ i ->
-        Array(sizeX) {j ->
-            Node(listOf(i, j))
-        }
-    }
-    init {
-        notTraversable.forEach { point ->
-            val node = getNodeInGrid(point)
-            node.isTraversable = false
-            node.type = "B"
+    private val grid: List<List<Node>> = List(sizeY){ i ->
+        List(sizeX) {j ->
+            Node(Position(i, j))
         }
     }
 
-    fun createWall(start: List<Int>, end: List<Int>){
-        val range1: IntRange = if (start[0] < end[0]) start[0]..end[0] else end[0]..start[0]
-        val range2: IntRange = if (start[1] < end[1]) start[1]..end[1] else end[1]..start[1]
+    fun createWall(start: Position, end: Position){
+        val range1: IntRange = if (start.line < end.line) start.line..end.line else end.line..start.line
+        val range2: IntRange = if (start.col < end.col) start.col..end.col else end.col..start.col
         for (i in range1){
             for (j in range2){
-                val node: Node = getNodeInGrid(listOf(i, j))
+                val node: Node = getNodeInGrid(Position(i, j))
                 node.isTraversable = false
                 node.type = "B"
             }
         }
     }
 
-    private fun getNodeInGrid(point: List<Int>): Node{
-        return grid[point[0]][point[1]]
+    private fun getNodeInGrid(point: Position): Node{
+        return grid[point.line][point.col]
     }
 
     private fun getBestNode(nodes: List<Node>): Node{
@@ -63,9 +58,9 @@ class Grid(
         return bestNode
     }
 
-    private fun calculateHCost(node: Node, end: List<Int>): Int {
-        val distX: Int = abs(end[0] - node.pos[0])
-        val distY: Int = abs(end[1] - node.pos[1])
+    private fun calculateHCost(node: Node, end: Position): Int {
+        val distX: Int = abs(end.line - node.pos.line)
+        val distY: Int = abs(end.col - node.pos.col)
         return if (distX > distY) distX*10 + distY*4 else distX*4 + distY*10
     }
 
@@ -74,18 +69,16 @@ class Grid(
             for (j in -1..1){
                 if (i == 0 && j == 0) continue
 
-                if( i + node.pos[0] in 0 until sizeY &&
-                    j + node.pos[1] in 0 until  sizeX) {
-                    func(grid[i + node.pos[0]][j + node.pos[1]], i, j)
+                if( i + node.pos.line in 0 until sizeY &&
+                    j + node.pos.col in 0 until  sizeX) {
+                    func(grid[i + node.pos.line][j + node.pos.col], i, j)
                 }
             }
         }
     }
 
-    fun shortestPath(start: List<Int>, end: List<Int>){
+    fun shortestPath(start: Position, end: Position){
         val endNode: Node = getNodeInGrid(end)
-        getNodeInGrid(end).type = "E"
-        getNodeInGrid(start).type = "S"
 
         val open = mutableListOf(getNodeInGrid(start))
 
@@ -95,7 +88,7 @@ class Grid(
             current.isClosed = true
 
             if (current == endNode  ){
-                printPath(end)
+                printPath(start, end)
                 return
             }
 
@@ -117,18 +110,33 @@ class Grid(
         }
     }
 
-    private fun printPath(end: List<Int>) {
-        var node: Node = getNodeInGrid(end).parent!!
-        while (node.parent != null) {
+    private fun printPath(start: Position, end: Position) {
+        var node: Node? = getNodeInGrid(end)
+        while (node != null){
             node.type = "."
-            node = node.parent!!
+            node = node.parent
         }
+        getNodeInGrid(end).type = "E"
+        getNodeInGrid(start).type = "S"
         printGrid()
     }
 
     fun printGrid(){
         grid.forEach { row ->
-            println(row.contentToString())
+            println(row.toString())
         }
     }
+}
+
+
+fun main(){
+    val g = Grid(10, 10)
+    g.createWall(Position(2, 0), Position(2, 5))
+    g.createWall(Position(7, 1), Position(7, 9))
+    g.printGrid()
+    println("--------------------------")
+    println("FINAL PATH")
+    g.shortestPath(Position(9, 8), Position(0, 1))
+
+
 }
