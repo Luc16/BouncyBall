@@ -2,23 +2,25 @@ package algorithm
 
 import kotlin.math.abs
 
-class Position(val line: Int, val col: Int)
+data class Position(val line: Int, val col: Int)
 
-private class Node(val pos: Position) {
+class Node(val pos: Position): HeapElement<Node> {
+    override var heapIdx: Int = 0
     var parent: Node? = null
-    var hCost: Int = 0
-    var gCost: Int = 0
+    var hCost = 0
+    var gCost = 0
     val fCost: Int
         get() {
             return gCost + hCost
         }
-    var isTraversable: Boolean = true
-    var isClosed: Boolean = false
+    var isTraversable = true
+    var isClosed = false
     var type: String = "N"
 
-    override fun toString(): String {
-        return type
-    }
+    override fun toString(): String = type// fCost.toString()
+
+
+    override fun compareTo(other: Node): Int = if (other.fCost - fCost == 0) other.hCost - hCost else other.fCost - fCost
 
 }
 
@@ -33,8 +35,8 @@ class Grid(
     }
 
     fun createWall(start: Position, end: Position){
-        val range1: IntRange = if (start.line < end.line) start.line..end.line else end.line..start.line
-        val range2: IntRange = if (start.col < end.col) start.col..end.col else end.col..start.col
+        val range1 = if (start.line < end.line) start.line..end.line else end.line..start.line
+        val range2 = if (start.col < end.col) start.col..end.col else end.col..start.col
         for (i in range1){
             for (j in range2){
                 val node: Node = getNodeInGrid(Position(i, j))
@@ -80,11 +82,14 @@ class Grid(
     fun shortestPath(start: Position, end: Position){
         val endNode: Node = getNodeInGrid(end)
 
-        val open = mutableListOf(getNodeInGrid(start))
+//        val open = mutableListOf(getNodeInGrid(start))
+        val open = Heap<Node>(sizeX*sizeY)
+        open.add(getNodeInGrid(start))
 
         while (true) {
-            val current: Node = getBestNode(open)
-            open.remove(current)
+            val current = open.pop()
+//            val current: Node = getBestNode(open)
+//            open.remove(current)
             current.isClosed = true
 
             if (current == endNode  ){
@@ -95,15 +100,19 @@ class Grid(
             forEachNeighbor(current) { node, i, j ->
                 if (!node.isTraversable || node.isClosed) return@forEachNeighbor
 
+                val prevGCost = node.gCost
                 val newGCost: Int = current.gCost + if (j == 0 || i == 0) 10 else 14
 
                 if (newGCost < node.gCost || node.gCost == 0){
-                    node.parent = current
-                    if (node.gCost == 0){
-                        open.add(node)
-                        node.hCost = calculateHCost(node, end)
-                    }
                     node.gCost = newGCost
+                    node.parent = current
+                    if (prevGCost == 0){
+                        node.hCost = calculateHCost(node, end)
+                        open.add(node)
+                    } else {
+                        open.updateItem(node)
+                    }
+
                 }
 
             }
@@ -128,7 +137,6 @@ class Grid(
     }
 }
 
-
 fun main(){
     val g = Grid(10, 10)
     g.createWall(Position(2, 0), Position(2, 5))
@@ -137,6 +145,5 @@ fun main(){
     println("--------------------------")
     println("FINAL PATH")
     g.shortestPath(Position(9, 8), Position(0, 1))
-
 
 }
