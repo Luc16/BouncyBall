@@ -6,13 +6,13 @@ import com.badlogic.gdx.math.Polygon
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 
-class PolygonRect(private val color: Color, vertices: FloatArray) {
-    val body = Polygon(vertices)
-
-    constructor(color: Color, vertices: List<Vector2>): this(color, FloatArray(2*vertices.size) { i ->
-        if (i % 2 == 0) vertices[i/2].x
-        else vertices[i/2].y
-    })
+class PolygonRect(x: Float, y: Float, width: Float, height: Float, private val color: Color) {
+    val body = Polygon(floatArrayOf(
+        x, y,
+        x, y + height,
+        x + width, y + height,
+        x + width, y
+    ))
 
     init {
         val wallCenter = Vector2(0f, 0f)

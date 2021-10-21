@@ -1,24 +1,33 @@
 package com.github.Luc16.bouncyball.components
 
+import com.badlogic.gdx.graphics.Camera
+import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Polygon
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
-import com.github.Luc16.bouncyball.Utils.toRad
+import com.badlogic.gdx.math.Vector3
+import com.github.Luc16.bouncyball.utils.toRad
+import com.github.Luc16.bouncyball.utils.translate
 import kotlin.math.cos
 import kotlin.math.sin
 
-class Ball(private val initialX: Float, private val initialY: Float, radius: Float, angle: Float) {
-    val rect = Rectangle(initialX + radius, initialY + radius, 2*radius, 2*radius)
-    private val speed = 20f
+class Ball(x: Float, y: Float, radius: Float, angle: Float) {
+    val rect = Rectangle(x - radius, y - radius, 2*radius, 2*radius)
+    private var speed = 10f
+    private val deceleration = 0.02f
     private val direction = Vector2(cos(angle.toRad()).toFloat(), sin(angle.toRad()).toFloat())
 
-
-    fun collide(walls: List<PolygonRect>){
+    fun collide(walls: List<PolygonRect>, camera: Camera){
         rect.run {
             val prevPos = Vector2(x, y)
             x += direction.x*speed
             y += direction.y*speed
+            speed -= deceleration
+            if (speed < 0) speed = 0f
+
+            camera.translate(direction.x*speed, direction.y*speed)
+            camera.update()
 
             walls.forEach { wall ->
                 if (overlaps(wall.body)){
@@ -53,10 +62,9 @@ class Ball(private val initialX: Float, private val initialY: Float, radius: Flo
         renderer.circle(rect.x + rect.width/2, rect.y + rect.height/2, rect.width/2)
     }
 
-    fun reset(dir: Vector2){
-        rect.x = initialX
-        rect.y = initialY
-        direction.set(dir.x - initialX, dir.y - initialY).nor()
+    fun changeDirection(dir: Vector3){
+        rect.run { direction.set(dir.x - x, dir.y - y).nor() }
+        speed = 10f
     }
 
 }
