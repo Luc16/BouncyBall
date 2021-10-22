@@ -2,17 +2,19 @@ package com.github.Luc16.bouncyball.components
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Circle
 import com.badlogic.gdx.math.Polygon
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 
-class PolygonRect(x: Float, y: Float, width: Float, height: Float, private val color: Color) {
+class PolygonRect(x: Float, y: Float, width: Float, height: Float, private val color: Color, rotation: Float = 0f) {
     val body = Polygon(floatArrayOf(
         x, y,
         x, y + height,
         x + width, y + height,
         x + width, y
     ))
+    val center: Circle
 
     init {
         val wallCenter = Vector2(0f, 0f)
@@ -24,6 +26,9 @@ class PolygonRect(x: Float, y: Float, width: Float, height: Float, private val c
         wallCenter.x /= 4
         wallCenter.y /= 4
         body.setOrigin(wallCenter.x, wallCenter.y)
+        center = Circle(wallCenter.x, wallCenter.y, 40f)
+
+        body.rotate(rotation)
     }
 
     fun side(pos: Vector2, rect: Rectangle): Boolean{
@@ -44,5 +49,7 @@ class PolygonRect(x: Float, y: Float, width: Float, height: Float, private val c
     fun draw(renderer: ShapeRenderer){
         renderer.color = color
         renderer.polygon(body.transformedVertices)
+        renderer.color = Color.WHITE
+        renderer.circle(center.x, center.y, center.radius)
     }
 }

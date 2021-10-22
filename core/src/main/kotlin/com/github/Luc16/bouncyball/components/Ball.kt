@@ -14,7 +14,7 @@ import kotlin.math.sin
 
 class Ball(x: Float, y: Float, radius: Float, angle: Float) {
     val rect = Rectangle(x - radius, y - radius, 2*radius, 2*radius)
-    private var speed = 10f
+    var speed = 10f
     private val deceleration = 0.02f
     private val direction = Vector2(cos(angle.toRad()).toFloat(), sin(angle.toRad()).toFloat())
 

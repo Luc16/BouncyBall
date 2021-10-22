@@ -14,7 +14,7 @@ import ktx.app.KtxGame
 import ktx.graphics.color
 import ktx.graphics.use
 
-const val WIDTH = 1280f
+const val WIDTH = 450f
 const val HEIGHT = 800f
 
 class BouncyBall: KtxGame<CustomScreen>() {
