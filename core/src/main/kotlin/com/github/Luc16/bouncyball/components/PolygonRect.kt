@@ -15,6 +15,7 @@ class PolygonRect(x: Float, y: Float, width: Float, height: Float, private val c
         x + width, y
     ))
     val center: Circle
+    var live = true
 
     init {
         val wallCenter = Vector2(0f, 0f)
@@ -47,6 +48,7 @@ class PolygonRect(x: Float, y: Float, width: Float, height: Float, private val c
     }
 
     fun draw(renderer: ShapeRenderer){
+        if (!live) return
         renderer.color = color
         renderer.polygon(body.transformedVertices)
         renderer.color = Color.WHITE

@@ -12,35 +12,63 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import com.github.Luc16.bouncyball.BouncyBall
 import com.github.Luc16.bouncyball.HEIGHT
 import com.github.Luc16.bouncyball.WIDTH
+import com.github.Luc16.bouncyball.components.PolygonRect
+import com.github.Luc16.bouncyball.utils.toRad
 import ktx.graphics.use
+import kotlin.math.abs
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
 
-    private val ball = Circle(45f, 80f, 10f)
+    private val ball = Circle(0f, 0f, 70f)
+    private val wall = PolygonRect(-225f, -150f, 450f, 80f, Color.BLUE)
+    private val dir = Vector2(sqrt(2f)/2, sqrt(2f)/2)
+    private var offset = 0f
 
     override fun show() {
-        viewport.camera.translate(ball.x, ball.y, 0f)
+        wall.body.rotate(-60f)
+//        viewport.camera.translate(ball.x, ball.y, 0f)
     }
 
     override fun render(delta: Float) {
-        handleInput()
-        val mouse = Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
-        viewport.unproject(mouse)
-        if (ball.contains(mouse)) println("$mouse In BALL")
+        val a = (wall.body.transformedVertices[5] - wall.body.transformedVertices[3])/(wall.body.transformedVertices[4] - wall.body.transformedVertices[2])
+        val b = -1f
+        val c = wall.body.transformedVertices[5] - a*wall.body.transformedVertices[4]
 
-        val numSquares = 20f
-        viewport.apply()
-        renderer.use(ShapeRenderer.ShapeType.Filled, viewport.camera.combined){
-            val ratioX = WIDTH/numSquares
-            for (i in 0..numSquares.toInt()){
-                renderer.color = Color((i%3==0).toInt()*i/20f + 0.2f, (i%3==1).toInt()*i/20f  + 0.2f, (i%3==2).toInt()*i/20f  + 0.2f, 0f)
-                renderer.rect(i*ratioX, 0f, (i + 1)*ratioX, HEIGHT)
+        val dist = ball.radius - abs(a*ball.x + b*ball.y + c)/sqrt(a*a + b*b)
+        val angle = wall.body.rotation -  90
+        val normal = Vector2(cos(angle.toRad()).toFloat(), sin(angle.toRad()).toFloat())
+
+        when {
+            (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) -> {
+                offset = dist/dir.dot(normal)
+                ball.x -= dir.x*offset
+                ball.y -= dir.y*offset
             }
+            (Gdx.input.isKeyJustPressed(Input.Keys.R)) -> {
+                ball.x += dir.x*offset
+                ball.y += dir.y*offset
+            }
+            (Gdx.input.isKeyPressed(Input.Keys.W)) -> wall.body.rotate(1f)
+            (Gdx.input.isKeyPressed(Input.Keys.S)) -> wall.body.rotate(-1f)
+
+
+        }
+
+
+        viewport.apply()
+        renderer.use(ShapeRenderer.ShapeType.Line, viewport.camera.combined){
+            renderer.color = Color.RED
+            renderer.circle(ball.x, ball.y, 5f)
             renderer.color = Color.WHITE
             renderer.circle(ball.x, ball.y, ball.radius)
-        }
-        batch.use(viewport.camera.combined) {
-            font.draw(batch, "ASDFASDFASDFASDFSADFASDFASFASFASFASFASFSAFASFI", 0f, HEIGHT/2)
+            renderer.color = Color.YELLOW
+            renderer.line(-225f, -225f, 225f, 225f)
+
+            renderer.line(wall.body.originX, wall.body.originY, wall.body.originX + normal.x*100f, wall.body.originY + normal.y*100 )
+            wall.draw(renderer)
         }
     }
 

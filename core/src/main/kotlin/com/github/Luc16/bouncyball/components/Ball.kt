@@ -11,6 +11,7 @@ import com.github.Luc16.bouncyball.utils.toRad
 import com.github.Luc16.bouncyball.utils.translate
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 class Ball(x: Float, y: Float, radius: Float, angle: Float) {
     val rect = Rectangle(x - radius, y - radius, 2*radius, 2*radius)
@@ -30,9 +31,12 @@ class Ball(x: Float, y: Float, radius: Float, angle: Float) {
             camera.update()
 
             walls.forEach { wall ->
+                if (!wall.live) return@forEach
                 if (overlaps(wall.body)){
+//                    wall.live = false
                     val angle = wall.body.rotation - (if (wall.side(prevPos, this)) 0 else 90)
                     val normal = Vector2(cos(angle.toRad()).toFloat(), sin(angle.toRad()).toFloat())
+
                     bounce(normal)
                 }
             }
@@ -59,11 +63,11 @@ class Ball(x: Float, y: Float, radius: Float, angle: Float) {
     }
 
     fun draw(renderer: ShapeRenderer){
-        renderer.circle(rect.x + rect.width/2, rect.y + rect.height/2, rect.width/2)
+        renderer.circle(rect.x + rect.width/2, rect.y + rect.height/2, rect.width/2f)
     }
 
-    fun changeDirection(dir: Vector3){
-        rect.run { direction.set(dir.x - x, dir.y - y).nor() }
+    fun changeDirection(dir: Vector2){
+        direction.set(dir).nor()
         speed = 10f
     }
 

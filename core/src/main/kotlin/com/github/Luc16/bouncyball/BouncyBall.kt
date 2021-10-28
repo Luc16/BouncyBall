@@ -1,18 +1,15 @@
 package com.github.Luc16.bouncyball
 
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.g2d.Batch
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.utils.viewport.FillViewport
 import com.badlogic.gdx.utils.viewport.FitViewport
 import com.github.Luc16.bouncyball.screens.CameraTestScreen
 import com.github.Luc16.bouncyball.screens.CustomScreen
 import com.github.Luc16.bouncyball.screens.PrototypeScreen
 import ktx.app.KtxGame
-import ktx.graphics.color
-import ktx.graphics.use
 
 const val WIDTH = 450f
 const val HEIGHT = 800f
@@ -28,7 +25,7 @@ class BouncyBall: KtxGame<CustomScreen>() {
         font.data.scale(2f)
         addScreen(PrototypeScreen(this))
         addScreen(CameraTestScreen(this))
-        setScreen<PrototypeScreen>()
+        setScreen<CameraTestScreen>()
     }
 
     override fun dispose() {

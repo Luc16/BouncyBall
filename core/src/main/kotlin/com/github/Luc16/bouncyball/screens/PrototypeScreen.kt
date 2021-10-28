@@ -6,14 +6,13 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.math.Vector3
 import com.github.Luc16.bouncyball.BouncyBall
 import com.github.Luc16.bouncyball.components.Ball
 import com.github.Luc16.bouncyball.components.PolygonRect
 import com.github.Luc16.bouncyball.utils.translate
 import ktx.graphics.use
 
-const val TIME_BETWEEN_CLICKS = 20f
+const val CLICK_MARGIN = 100f
 
 class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
 
@@ -31,6 +30,7 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
     private val screenRect = Rectangle(0f, 0f, 1280f, 800f)
     private val camera = viewport.camera
     private var clickTime = 0
+    private var prevPos = Vector2().setZero()
 
     override fun show() {
         camera.translate(ball.rect.x, ball.rect.y)
@@ -41,7 +41,6 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
 
         ball.collide(walls, camera)
         bounceOfWalls()
-
 
         viewport.apply()
         renderer.use(ShapeRenderer.ShapeType.Line, camera){
@@ -61,26 +60,34 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
         val touchPoint = Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
         viewport.unproject(touchPoint)
         walls.forEach { wall ->
+            if (!wall.live) return@forEach
             when {
                 (Gdx.input.isTouched || Gdx.input.isButtonPressed(Input.Buttons.LEFT)) && wall.center.contains(touchPoint) -> {
                     ball.speed = 0f
                     wall.body.rotate(1f)
                     clickTime = 0
+                    prevPos.setZero()
                 }
                 Gdx.input.isKeyPressed(Input.Keys.UP) || Gdx.input.isKeyPressed(Input.Keys.W) -> wall.body.rotate(1f)
                 Gdx.input.isKeyPressed(Input.Keys.DOWN) || Gdx.input.isKeyPressed(Input.Keys.S) -> wall.body.rotate(-1f)
             }
         }
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) walls.forEach { it.live = true }
 
         when {
-            Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) || (Gdx.input.isTouched && clickTime > TIME_BETWEEN_CLICKS) -> {
-                clickTime = 0
-                val mouse = Vector3(Gdx.input.x.toFloat(), Gdx.input.y.toFloat(), 0f)
-                camera.unproject(mouse)
-                ball.changeDirection(mouse)
+            Gdx.input.justTouched() || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) -> {
+                prevPos.set(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
             }
+            (!Gdx.input.isTouched || !Gdx.input.isButtonPressed(Input.Buttons.LEFT)) && !prevPos.isZero  -> {
+                val dir = Vector2(Gdx.input.x.toFloat() - prevPos.x, -(Gdx.input.y.toFloat() - prevPos.y))
+                if (!dir.isZero(CLICK_MARGIN)) ball.changeDirection(dir)
+                prevPos.setZero()
+            }
+            Gdx.input.isKeyJustPressed(Input.Keys.S) -> ball.speed = 0f
+            !Gdx.input.isTouched -> prevPos.setZero()
         }
     }
+
     private fun bounceOfWalls(){
         when {
             ball.rect.x + ball.rect.width >= screenRect.width -> {
