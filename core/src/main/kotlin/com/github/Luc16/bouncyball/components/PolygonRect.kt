@@ -2,56 +2,124 @@ package com.github.Luc16.bouncyball.components
 
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.math.Circle
-import com.badlogic.gdx.math.Polygon
-import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
+import com.github.Luc16.bouncyball.utils.dist2
+import com.github.Luc16.bouncyball.utils.sign
+import com.github.Luc16.bouncyball.utils.toRad
+import kotlin.math.*
 
-class PolygonRect(x: Float, y: Float, width: Float, height: Float, private val color: Color, rotation: Float = 0f) {
-    val body = Polygon(floatArrayOf(
-        x, y,
-        x, y + height,
-        x + width, y + height,
-        x + width, y
-    ))
-    val center: Circle
-    var live = true
+const val DIAGONAL_OFFSET = 3f
 
-    init {
-        val wallCenter = Vector2(0f, 0f)
-        body.transformedVertices.forEachIndexed { i, vertex ->
-            if (i%2==0) wallCenter.x += vertex
-            else wallCenter.y += vertex
+class PolygonRect( x: Float, y: Float, width: Float, height: Float, private val color: Color) {
+    val vertices = listOf(
+        Vector2(x, y + height - DIAGONAL_OFFSET),
+        Vector2(x + DIAGONAL_OFFSET, y + height),
+
+        Vector2(x + width, y + height + DIAGONAL_OFFSET),
+        Vector2(x + width + DIAGONAL_OFFSET, y + height),
+
+        Vector2(x + width + DIAGONAL_OFFSET, y),
+        Vector2(x + width, y - DIAGONAL_OFFSET),
+
+        Vector2(x + DIAGONAL_OFFSET, y),
+        Vector2(x, y + DIAGONAL_OFFSET)
+    )
+    val x = x + width/2
+    val y = y + height/2
+    val r = 40f
+
+    fun rotate(deg: Float){
+        val rad = deg.toRad()
+        val cos = cos(rad)
+        val sin = sin(rad)
+        vertices.forEach { v ->
+            v.x -= x
+            v.y -= y
+            val oldX: Float = v.x
+            v.x = (cos * v.x - sin * v.y) + x
+            v.y = (sin * oldX + cos * v.y) + y
         }
-
-        wallCenter.x /= 4
-        wallCenter.y /= 4
-        body.setOrigin(wallCenter.x, wallCenter.y)
-        center = Circle(wallCenter.x, wallCenter.y, 40f)
-
-        body.rotate(rotation)
     }
 
-    fun side(pos: Vector2, rect: Rectangle): Boolean{
-        val points = List(body.transformedVertices.size/2) { i ->
-            Vector2(body.transformedVertices[2*i], body.transformedVertices[2*i + 1])
+    private fun forEachPair(action: (Vector2, Vector2) -> Unit){
+        for (i in vertices.indices){
+            action(vertices[i], vertices[(i+1)%vertices.size])
         }
-        val m1 = (points[0].y - points[3].y)/(points[0].x - points[3].x)
-        val y1 = m1*pos.x + (points[0].y - m1*points[0].x)
-        val m2 = (points[1].y - points[2].y)/(points[1].x - points[2].x)
-        val y2 = m2*pos.x + (points[1].y - m2*points[1].x)
-
-        return (pos.y + rect.width in y1..y2) ||
-                (pos.y + rect.width in y2..y1) ||
-                (pos.y in y1..y2) ||
-                (pos.y in y2..y1)
     }
+
+    fun collideBall(ball: Ball): Triple<Boolean, Float, Vector2> {
+        var depth = Float.MAX_VALUE
+        val normal = Vector2()
+
+        var colliding = true
+        forEachPair { v1, v2 ->
+            if (!colliding) return@forEachPair
+
+            val axis = Vector2(v1.y - v2.y, v2.x - v1.x)
+            axis.nor()
+
+            val (minPR, maxPR) = projectVertices(axis)
+            val (minB, maxB) = ball.projectCircle(axis)
+
+            if (minB >= maxPR || minPR >= maxB) {
+                colliding = false
+                return@forEachPair
+            }
+
+            val axisDepth = min(maxB - minPR, maxPR - minB)
+
+            if (axisDepth < depth){
+                normal.set(axis)
+                depth = axisDepth
+            }
+
+        }
+        if (!colliding) return Triple(false, 0f, Vector2())
+
+        val (distToPoint, closestPoint) = ball.findClosestPoint(this)
+
+        val axis = Vector2(ball.y - closestPoint.y, closestPoint.x - ball.x)
+        axis.nor()
+
+        val (minPR, maxPR) = projectVertices(axis)
+        val (minB, maxB) = ball.projectCircle(axis)
+
+        if (minB >= maxPR || minPR >= maxB) {
+            return Triple(false, 0f, Vector2())
+        }
+
+        val axisDepth = min(maxB - minPR, maxPR - minB)
+        if (axisDepth < depth){
+            normal.set(axis)
+            depth = axisDepth
+        }
+
+        val direction = Vector2(x - ball.x, y - ball.y)
+
+        if (direction.dot(normal) < 0f) normal.scl(-1f)
+
+        return Triple(true, depth, normal)
+    }
+
+    private fun projectVertices(axis: Vector2): Pair<Float, Float> {
+        var min = Float.MAX_VALUE
+        var max = Float.MIN_VALUE
+        vertices.forEach { vertex ->
+            val projection = vertex.dot(axis)
+            min = min(projection, min)
+            max = max(projection, max)
+        }
+        return Pair(min, max)
+    }
+
+
 
     fun draw(renderer: ShapeRenderer){
-        if (!live) return
         renderer.color = color
-        renderer.polygon(body.transformedVertices)
+        forEachPair { v1, v2 ->
+            renderer.line(v1, v2)
+        }
         renderer.color = Color.WHITE
-        renderer.circle(center.x, center.y, center.radius)
+        renderer.circle(x, y, 40f)
     }
 }

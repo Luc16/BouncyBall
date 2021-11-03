@@ -8,48 +8,26 @@ import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 import com.github.Luc16.bouncyball.BouncyBall
 import com.github.Luc16.bouncyball.components.Ball
-import com.github.Luc16.bouncyball.components.PolygonRect
-import com.github.Luc16.bouncyball.utils.dist2
 import com.github.Luc16.bouncyball.utils.translate
 import ktx.graphics.use
 
-const val CLICK_MARGIN = 100f
+class BallScreen(game: BouncyBall): CustomScreen(game) {
 
-class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
-
-    private val walls = listOf(
-        PolygonRect(50f, 600f, 200f, 50f, Color.BLUE),
-        PolygonRect(300f, 600f, 200f, 50f, Color.BLUE),
-        PolygonRect(550f, 600f, 200f, 50f, Color.BLUE),
-        PolygonRect(800f, 600f, 200f, 50f, Color.BLUE),
-        PolygonRect(50f, 200f, 200f, 50f, Color.BLUE),
-        PolygonRect(300f, 200f, 200f, 50f, Color.BLUE),
-        PolygonRect(1050f, 600f, 200f, 50f, Color.BLUE),
-        PolygonRect(600f, 200f, 500f, 60f, Color.VIOLET)
-    )
     private val screenRect = Rectangle(0f, 0f, 1280f, 800f)
     private val camera = viewport.camera
-    private val ball = Ball(100f, 100f, 10f, camera)
+    private val ball = Ball(100f, 100f, 10f)
     private var prevPos = Vector2().setZero()
-
-    override fun show() {
-        camera.translate(ball.x, ball.y)
-    }
 
     override fun render(delta: Float) {
         handleInputs()
 
         ball.update(delta)
-        ball.collideWalls(walls)
         bounceOfWalls()
 
         viewport.apply()
         renderer.use(ShapeRenderer.ShapeType.Line, camera){
             renderer.color = Color.LIGHT_GRAY
             renderer.rect(0f, 0f, screenRect.width, screenRect.height)
-            walls.forEach { wall ->
-                wall.draw(renderer)
-            }
             renderer.color = Color.YELLOW
             ball.draw(renderer)
 
@@ -59,18 +37,6 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
     private fun handleInputs(){
         val touchPoint = Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
         viewport.unproject(touchPoint)
-        walls.forEach { wall ->
-            when {
-                (Gdx.input.isTouched || Gdx.input.isButtonPressed(Input.Buttons.LEFT)) &&
-                        dist2(touchPoint, wall.x, wall.y) <= wall.r*wall.r -> {
-                    ball.speed = 0f
-                    wall.rotate(1f)
-                    prevPos.setZero()
-                }
-                Gdx.input.isKeyPressed(Input.Keys.UP) || Gdx.input.isKeyPressed(Input.Keys.W) -> wall.rotate(1f)
-                Gdx.input.isKeyPressed(Input.Keys.DOWN) || Gdx.input.isKeyPressed(Input.Keys.S) -> wall.rotate(-1f)
-            }
-        }
 
         when {
             Gdx.input.justTouched() || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) -> {
@@ -81,9 +47,13 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
                 if (!dir.isZero(CLICK_MARGIN)) ball.changeDirection(dir)
                 prevPos.setZero()
             }
-            Gdx.input.isKeyJustPressed(Input.Keys.S) -> ball.speed = 0f
+
             !Gdx.input.isTouched -> prevPos.setZero()
         }
+        if (Gdx.input.isKeyPressed(Input.Keys.W) || Gdx.input.isKeyPressed(Input.Keys.UP)) camera.translate(y = 10f)
+        if (Gdx.input.isKeyPressed(Input.Keys.A) || Gdx.input.isKeyPressed(Input.Keys.LEFT)) camera.translate(x = -10f)
+        if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) camera.translate(y = -10f)
+        if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) camera.translate(x = 10f)
     }
 
     private fun bounceOfWalls(){

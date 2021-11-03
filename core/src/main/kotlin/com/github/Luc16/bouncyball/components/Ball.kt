@@ -1,57 +1,46 @@
 package com.github.Luc16.bouncyball.components
 
 import com.badlogic.gdx.graphics.Camera
-import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.math.Polygon
-import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
-import com.badlogic.gdx.math.Vector3
-import com.github.Luc16.bouncyball.utils.toRad
+import com.github.Luc16.bouncyball.utils.dist2
 import com.github.Luc16.bouncyball.utils.translate
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
 
-class Ball(x: Float, y: Float, radius: Float, angle: Float) {
-    val rect = Rectangle(x - radius, y - radius, 2*radius, 2*radius)
-    var speed = 10f
-    private val deceleration = 0.02f
-    private val direction = Vector2(cos(angle.toRad()).toFloat(), sin(angle.toRad()).toFloat())
+const val MAX_SPEED = 600f
 
-    fun collide(walls: List<PolygonRect>, camera: Camera){
-        rect.run {
-            val prevPos = Vector2(x, y)
-            x += direction.x*speed
-            y += direction.y*speed
-            speed -= deceleration
-            if (speed < 0) speed = 0f
+class Ball(var x: Float, var y: Float, val radius: Float, private val camera: Camera? = null) {
+    var speed = MAX_SPEED
+    private val deceleration = 72f
+    private val direction = Vector2(0f, 0f)
+    val pos: Vector2 get() = Vector2(x, y)
+    val radius2 get() = radius*radius
 
-            camera.translate(direction.x*speed, direction.y*speed)
-            camera.update()
-
-            walls.forEach { wall ->
-                if (!wall.live) return@forEach
-                if (overlaps(wall.body)){
-//                    wall.live = false
-                    val angle = wall.body.rotation - (if (wall.side(prevPos, this)) 0 else 90)
-                    val normal = Vector2(cos(angle.toRad()).toFloat(), sin(angle.toRad()).toFloat())
-
-                    bounce(normal)
-                }
-            }
-        }
+    fun move(valX: Float, valY: Float){
+        x += valX
+        y += valY
+        camera?.translate(valX, valY)
     }
 
-    private fun overlaps(polygon: Polygon): Boolean{
-        rect.run {
-            val vertices = listOf(Vector2(x, y), Vector2(x + width, y), Vector2(x, y + height), Vector2(x + width, y + height))
-            vertices.forEach { vertex ->
-                if (polygon.contains(vertex)) {
-                    return true
-                }
+    fun move(vec: Vector2){
+        x += vec.x
+        y += vec.y
+        camera?.translate(vec.x, vec.y)
+    }
+
+    fun update(delta: Float){
+        move(direction.x*speed*delta, direction.y*speed*delta)
+        speed -= deceleration*delta
+        if (speed < 0) speed = 0f
+
+    }
+
+    fun collideWalls(walls: List<PolygonRect>){
+        walls.forEach { wall ->
+            val (collided, depth, normal) = wall.collideBall(this)
+            if (collided){
+                bounce(normal)
+                move(-normal.x*depth, -normal.y*depth)
             }
-            return false
         }
     }
 
@@ -62,13 +51,39 @@ class Ball(x: Float, y: Float, radius: Float, angle: Float) {
         direction.nor()
     }
 
+    fun projectCircle(axis: Vector2): Pair<Float, Float>{
+        val direction = Vector2(axis.x*radius, axis.y*radius)
+        val p1 = Vector2(x + direction.x, y + direction.y)
+        val p2 = Vector2(x - direction.x, y - direction.y)
+
+        var min = p1.dot(axis)
+        var max = p2.dot(axis)
+
+        if (max < min) min = max.also { max = min }
+
+        return Pair(min, max)
+    }
+
+    fun findClosestPoint(poly: PolygonRect): Pair<Float, Vector2>{
+        var dist = Float.MAX_VALUE
+        var point = Vector2()
+        poly.vertices.forEach { vertex ->
+            val d = dist2(vertex, x, y)
+            if (d < dist) {
+                dist = d
+                point = vertex
+            }
+        }
+        return Pair(dist, point)
+    }
+
     fun draw(renderer: ShapeRenderer){
-        renderer.circle(rect.x + rect.width/2, rect.y + rect.height/2, rect.width/2f)
+        renderer.circle(x, y, radius)
     }
 
     fun changeDirection(dir: Vector2){
         direction.set(dir).nor()
-        speed = 10f
+        speed = MAX_SPEED
     }
 
 }

@@ -12,8 +12,11 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import com.github.Luc16.bouncyball.BouncyBall
 import com.github.Luc16.bouncyball.HEIGHT
 import com.github.Luc16.bouncyball.WIDTH
+import com.github.Luc16.bouncyball.components.Ball
 import com.github.Luc16.bouncyball.components.PolygonRect
+import com.github.Luc16.bouncyball.utils.dist2
 import com.github.Luc16.bouncyball.utils.toRad
+import ktx.graphics.circle
 import ktx.graphics.use
 import kotlin.math.abs
 import kotlin.math.cos
@@ -22,38 +25,34 @@ import kotlin.math.sqrt
 
 class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
 
-    private val ball = Circle(0f, 0f, 70f)
-    private val wall = PolygonRect(-225f, -150f, 450f, 80f, Color.BLUE)
+    private val ball = Ball(0f, 0f, 70f)
+    private val wall = PolygonRect(-80f, -120f, 90f, 80f, Color.BLUE)
     private val dir = Vector2(sqrt(2f)/2, sqrt(2f)/2)
-    private var offset = 0f
+    private val prevPos = Vector2(ball.x, ball.y)
+    private var normal = Vector2()
 
     override fun show() {
-        wall.body.rotate(-60f)
+//        wall.body.rotate(-60f)
 //        viewport.camera.translate(ball.x, ball.y, 0f)
     }
 
     override fun render(delta: Float) {
-        val a = (wall.body.transformedVertices[5] - wall.body.transformedVertices[3])/(wall.body.transformedVertices[4] - wall.body.transformedVertices[2])
-        val b = -1f
-        val c = wall.body.transformedVertices[5] - a*wall.body.transformedVertices[4]
-
-        val dist = ball.radius - abs(a*ball.x + b*ball.y + c)/sqrt(a*a + b*b)
-        val angle = wall.body.rotation -  90
-        val normal = Vector2(cos(angle.toRad()).toFloat(), sin(angle.toRad()).toFloat())
-
         when {
-            (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) -> {
-                offset = dist/dir.dot(normal)
-                ball.x -= dir.x*offset
-                ball.y -= dir.y*offset
-            }
             (Gdx.input.isKeyJustPressed(Input.Keys.R)) -> {
-                ball.x += dir.x*offset
-                ball.y += dir.y*offset
+                ball.x = prevPos.x
+                ball.y = prevPos.y
             }
-            (Gdx.input.isKeyPressed(Input.Keys.W)) -> wall.body.rotate(1f)
-            (Gdx.input.isKeyPressed(Input.Keys.S)) -> wall.body.rotate(-1f)
-
+            (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) -> {
+                prevPos.set(ball.x, ball.y)
+                val (collided, depth, n) = wall.collideBall(ball)
+                normal = n
+                if (collided){
+                    val offset = -depth/dir.dot(normal)
+                    ball.move(dir.x*offset, dir.y*offset)
+                }
+            }
+            (Gdx.input.isKeyPressed(Input.Keys.W)) -> wall.rotate(1f)
+            (Gdx.input.isKeyPressed(Input.Keys.S)) -> wall.rotate(-1f)
 
         }
 
@@ -66,8 +65,10 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
             renderer.circle(ball.x, ball.y, ball.radius)
             renderer.color = Color.YELLOW
             renderer.line(-225f, -225f, 225f, 225f)
+            renderer.color = Color.RED
+//            renderer.circle(p, 10f)
 
-            renderer.line(wall.body.originX, wall.body.originY, wall.body.originX + normal.x*100f, wall.body.originY + normal.y*100 )
+            renderer.line(wall.x, wall.y, wall.x + normal.x*100f, wall.y + normal.y*100 )
             wall.draw(renderer)
         }
     }
@@ -113,5 +114,3 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
 
 
 }
-
-private fun Boolean.toInt(): Int = if (this) 1 else 0
