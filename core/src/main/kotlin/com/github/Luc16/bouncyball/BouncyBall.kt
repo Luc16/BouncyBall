@@ -28,7 +28,7 @@ class BouncyBall: KtxGame<CustomScreen>() {
         addScreen(PrototypeScreen(this))
         addScreen(CameraTestScreen(this))
         addScreen(BallScreen(this))
-        setScreen<BallScreen>()
+        setScreen<PrototypeScreen>()
     }
 
     override fun dispose() {

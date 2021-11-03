@@ -76,7 +76,7 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, private val 
         }
         if (!colliding) return Triple(false, 0f, Vector2())
 
-        val (distToPoint, closestPoint) = ball.findClosestPoint(this)
+        val closestPoint = ball.findClosestPoint(this)
 
         val axis = Vector2(ball.y - closestPoint.y, closestPoint.x - ball.x)
         axis.nor()

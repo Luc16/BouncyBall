@@ -64,7 +64,7 @@ class Ball(var x: Float, var y: Float, val radius: Float, private val camera: Ca
         return Pair(min, max)
     }
 
-    fun findClosestPoint(poly: PolygonRect): Pair<Float, Vector2>{
+    fun findClosestPoint(poly: PolygonRect): Vector2{
         var dist = Float.MAX_VALUE
         var point = Vector2()
         poly.vertices.forEach { vertex ->
@@ -74,7 +74,7 @@ class Ball(var x: Float, var y: Float, val radius: Float, private val camera: Ca
                 point = vertex
             }
         }
-        return Pair(dist, point)
+        return point
     }
 
     fun draw(renderer: ShapeRenderer){
