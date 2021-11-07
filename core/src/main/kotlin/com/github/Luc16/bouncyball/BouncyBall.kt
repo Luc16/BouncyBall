@@ -15,6 +15,8 @@ import ktx.app.KtxGame
 
 const val WIDTH = 450f
 const val HEIGHT = 800f
+//const val WIDTH = 1280f
+//const val HEIGHT = 800f
 
 class BouncyBall: KtxGame<CustomScreen>() {
     val renderer: ShapeRenderer by lazy { ShapeRenderer() }
@@ -23,12 +25,11 @@ class BouncyBall: KtxGame<CustomScreen>() {
     val gameViewport = FitViewport(450f, 800f)
 
     override fun create() {
-
         font.data.scale(2f)
         addScreen(PrototypeScreen(this))
         addScreen(CameraTestScreen(this))
         addScreen(BallScreen(this))
-        setScreen<PrototypeScreen>()
+        setScreen<BallScreen>()
     }
 
     override fun dispose() {

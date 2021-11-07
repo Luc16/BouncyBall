@@ -10,7 +10,7 @@ import com.badlogic.gdx.utils.viewport.FitViewport
 import ktx.app.KtxScreen
 
 abstract class CustomScreen(
-    private val game: BouncyBall,
+    val game: BouncyBall,
     val batch: Batch = game.batch,
     val renderer: ShapeRenderer = game.renderer,
     val font: BitmapFont = game.font,

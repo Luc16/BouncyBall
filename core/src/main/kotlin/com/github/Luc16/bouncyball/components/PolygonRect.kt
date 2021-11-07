@@ -11,7 +11,7 @@ import kotlin.math.*
 const val DIAGONAL_OFFSET = 3f
 
 class PolygonRect( x: Float, y: Float, width: Float, height: Float, private val color: Color) {
-    val vertices = listOf(
+    private val vertices = listOf(
         Vector2(x, y + height - DIAGONAL_OFFSET),
         Vector2(x + DIAGONAL_OFFSET, y + height),
 
@@ -47,6 +47,19 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, private val 
         }
     }
 
+    fun findClosestPoint(ball: Ball): Vector2{
+        var dist = Float.MAX_VALUE
+        var point = Vector2()
+        vertices.forEach { vertex ->
+            val d = dist2(vertex, ball.x, ball.y)
+            if (d < dist) {
+                dist = d
+                point = vertex
+            }
+        }
+        return point
+    }
+
     fun collideBall(ball: Ball): Triple<Boolean, Float, Vector2> {
         var depth = Float.MAX_VALUE
         val normal = Vector2()
@@ -76,7 +89,7 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, private val 
         }
         if (!colliding) return Triple(false, 0f, Vector2())
 
-        val closestPoint = ball.findClosestPoint(this)
+        val closestPoint = findClosestPoint(ball)
 
         val axis = Vector2(ball.y - closestPoint.y, closestPoint.x - ball.x)
         axis.nor()

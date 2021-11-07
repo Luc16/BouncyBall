@@ -8,9 +8,11 @@ import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 import com.github.Luc16.bouncyball.BouncyBall
 import com.github.Luc16.bouncyball.components.Ball
+import com.github.Luc16.bouncyball.components.PlayerBall
 import com.github.Luc16.bouncyball.components.PolygonRect
 import com.github.Luc16.bouncyball.utils.dist2
 import com.github.Luc16.bouncyball.utils.translate
+import ktx.graphics.moveTo
 import ktx.graphics.use
 
 const val CLICK_MARGIN = 100f
@@ -29,34 +31,27 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
     )
     private val screenRect = Rectangle(0f, 0f, 1280f, 800f)
     private val camera = viewport.camera
-    private val ball = Ball(100f, 100f, 10f, camera)
+    private val ball = PlayerBall(100f, 100f, 10f, camera)
     private var prevPos = Vector2().setZero()
 
     override fun show() {
-        camera.translate(ball.x, ball.y)
+        camera.moveTo(ball.pos)
     }
 
     override fun render(delta: Float) {
         handleInputs()
 
         ball.update(delta)
-        ball.collideWalls(walls)
+        walls.forEach { ball.collideWall(it) }
         bounceOfWalls()
 
-        viewport.apply()
-        renderer.use(ShapeRenderer.ShapeType.Line, camera){
-            renderer.color = Color.LIGHT_GRAY
-            renderer.rect(0f, 0f, screenRect.width, screenRect.height)
-            walls.forEach { wall ->
-                wall.draw(renderer)
-            }
-            renderer.color = Color.YELLOW
-            ball.draw(renderer)
-
-        }
+        draw()
     }
 
     private fun handleInputs(){
+        if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1) ||
+        Gdx.input.isTouched(0) && Gdx.input.isTouched(1)) game.setScreen<BallScreen>()
+
         val touchPoint = Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
         viewport.unproject(touchPoint)
         walls.forEach { wall ->
@@ -72,6 +67,10 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
             }
         }
 
+        handleSwipe()
+    }
+
+    private fun handleSwipe(){
         when {
             Gdx.input.justTouched() || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) -> {
                 prevPos.set(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
@@ -104,6 +103,19 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
                 ball.move(0f, -ball.y + ball.radius)
                 ball.bounce(Vector2(0f, 1f))
             }
+        }
+    }
+
+    private fun draw(){
+        viewport.apply()
+        renderer.use(ShapeRenderer.ShapeType.Line, camera){
+            renderer.color = Color.LIGHT_GRAY
+            renderer.rect(0f, 0f, screenRect.width, screenRect.height)
+            walls.forEach { wall ->
+                wall.draw(renderer)
+            }
+            renderer.color = Color.YELLOW
+            ball.draw(renderer)
         }
     }
 

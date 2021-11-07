@@ -4,27 +4,35 @@ import com.badlogic.gdx.graphics.Camera
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
 import com.github.Luc16.bouncyball.utils.dist2
+import com.github.Luc16.bouncyball.utils.toRad
 import com.github.Luc16.bouncyball.utils.translate
+import com.badlogic.gdx.graphics.Color
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 
 const val MAX_SPEED = 600f
+const val DECELERATION = 72f
 
-class Ball(var x: Float, var y: Float, val radius: Float, private val camera: Camera? = null) {
+open class Ball(var x: Float,
+                var y: Float,
+                val radius: Float,
+                private var color: Color = Color.YELLOW,
+                angle: Float = 0f) {
     var speed = MAX_SPEED
-    private val deceleration = 72f
-    private val direction = Vector2(0f, 0f)
+    private val deceleration = DECELERATION
+    val direction = Vector2(cos(angle.toRad()), sin(angle.toRad()))
     val pos: Vector2 get() = Vector2(x, y)
     val radius2 get() = radius*radius
 
-    fun move(valX: Float, valY: Float){
+    open fun move(valX: Float, valY: Float){
         x += valX
         y += valY
-        camera?.translate(valX, valY)
     }
 
-    fun move(vec: Vector2){
+    private fun move(vec: Vector2){
         x += vec.x
         y += vec.y
-        camera?.translate(vec.x, vec.y)
     }
 
     fun update(delta: Float){
@@ -34,13 +42,24 @@ class Ball(var x: Float, var y: Float, val radius: Float, private val camera: Ca
 
     }
 
-    fun collideWalls(walls: List<PolygonRect>){
-        walls.forEach { wall ->
-            val (collided, depth, normal) = wall.collideBall(this)
-            if (collided){
-                bounce(normal)
-                move(-normal.x*depth, -normal.y*depth)
-            }
+    fun collideBall(other: Ball){
+        if (dist2(pos, other.pos) <= (radius + other.radius)*(radius + other.radius)){
+            val offset = radius + other.radius - sqrt(dist2(pos, other.pos))
+            val normal = Vector2(x - other.x, y - other.y).nor()
+
+            move(normal.x * offset/2, normal.y * offset/2)
+            bounce(normal)
+
+            other.move(-normal.x * offset/2, -normal.y * offset/2)
+            other.bounce(normal)
+        }
+    }
+
+    fun collideWall(wall: PolygonRect){
+        val (collided, depth, normal) = wall.collideBall(this)
+        if (collided){
+            bounce(normal)
+            move(-normal.x*depth, -normal.y*depth)
         }
     }
 
@@ -64,20 +83,8 @@ class Ball(var x: Float, var y: Float, val radius: Float, private val camera: Ca
         return Pair(min, max)
     }
 
-    fun findClosestPoint(poly: PolygonRect): Vector2{
-        var dist = Float.MAX_VALUE
-        var point = Vector2()
-        poly.vertices.forEach { vertex ->
-            val d = dist2(vertex, x, y)
-            if (d < dist) {
-                dist = d
-                point = vertex
-            }
-        }
-        return point
-    }
-
     fun draw(renderer: ShapeRenderer){
+        renderer.color = color
         renderer.circle(x, y, radius)
     }
 
