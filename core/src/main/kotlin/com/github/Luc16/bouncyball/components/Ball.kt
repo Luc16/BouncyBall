@@ -7,6 +7,7 @@ import com.github.Luc16.bouncyball.utils.dist2
 import com.github.Luc16.bouncyball.utils.toRad
 import com.github.Luc16.bouncyball.utils.translate
 import com.badlogic.gdx.graphics.Color
+import com.badlogic.gdx.math.Rectangle
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -16,11 +17,12 @@ const val DECELERATION = 72f
 
 open class Ball(var x: Float,
                 var y: Float,
-                val radius: Float,
+                var radius: Float,
                 private var color: Color = Color.YELLOW,
-                angle: Float = 0f) {
-    var speed = MAX_SPEED
-    private val deceleration = DECELERATION
+                angle: Float = 0f,
+                private val deceleration: Float = DECELERATION,
+                var speed: Float = MAX_SPEED
+) {
     val direction = Vector2(cos(angle.toRad()), sin(angle.toRad()))
     val pos: Vector2 get() = Vector2(x, y)
     val radius2 get() = radius*radius
@@ -35,11 +37,10 @@ open class Ball(var x: Float,
         y += vec.y
     }
 
-    fun update(delta: Float){
+    open fun update(delta: Float){
         move(direction.x*speed*delta, direction.y*speed*delta)
         speed -= deceleration*delta
         if (speed < 0) speed = 0f
-
     }
 
     fun collideBall(other: Ball){
@@ -63,7 +64,7 @@ open class Ball(var x: Float,
         }
     }
 
-    fun bounce(normal: Vector2){
+    private fun bounce(normal: Vector2){
         val dot = direction.dot(normal)
         direction.x -= 2*normal.x*dot
         direction.y -= 2*normal.y*dot
@@ -83,14 +84,35 @@ open class Ball(var x: Float,
         return Pair(min, max)
     }
 
-    fun draw(renderer: ShapeRenderer){
-        renderer.color = color
-        renderer.circle(x, y, radius)
-    }
-
     fun changeDirection(dir: Vector2){
         direction.set(dir).nor()
         speed = MAX_SPEED
+    }
+
+    fun bounceOfWalls(screenRect: Rectangle){
+        when {
+            x + radius >= screenRect.width -> {
+                move(screenRect.width - (radius + x), 0f)
+                bounce(Vector2(-1f, 0f))
+            }
+            x - radius <= 0 -> {
+                move(-x + radius, 0f)
+                bounce(Vector2(1f, 0f))
+            }
+            y + radius >= screenRect.height -> {
+                move(0f, screenRect.height - radius - y)
+                bounce(Vector2(0f, -1f))
+            }
+            y - radius <= 0 -> {
+                move(0f, -y + radius)
+                bounce(Vector2(0f, 1f))
+            }
+        }
+    }
+
+    fun draw(renderer: ShapeRenderer){
+        renderer.color = color
+        renderer.circle(x, y, radius)
     }
 
 }

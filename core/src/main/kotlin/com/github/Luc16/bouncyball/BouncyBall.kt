@@ -6,10 +6,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.utils.viewport.FillViewport
 import com.badlogic.gdx.utils.viewport.FitViewport
-import com.github.Luc16.bouncyball.screens.BallScreen
-import com.github.Luc16.bouncyball.screens.CameraTestScreen
-import com.github.Luc16.bouncyball.screens.CustomScreen
-import com.github.Luc16.bouncyball.screens.PrototypeScreen
+import com.github.Luc16.bouncyball.screens.*
 //import com.github.Luc16.bouncyball.screens.PrototypeScreen
 import ktx.app.KtxGame
 
@@ -29,7 +26,9 @@ class BouncyBall: KtxGame<CustomScreen>() {
         addScreen(PrototypeScreen(this))
         addScreen(CameraTestScreen(this))
         addScreen(BallScreen(this))
-        setScreen<BallScreen>()
+        addScreen(TestMapScreen(this))
+        addScreen(ParticleScreen(this))
+        setScreen<CameraTestScreen>()
     }
 
     override fun dispose() {

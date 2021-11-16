@@ -8,9 +8,9 @@ import com.github.Luc16.bouncyball.utils.sign
 import com.github.Luc16.bouncyball.utils.toRad
 import kotlin.math.*
 
-const val DIAGONAL_OFFSET = 3f
+const val DIAGONAL_OFFSET = 1f
 
-class PolygonRect( x: Float, y: Float, width: Float, height: Float, private val color: Color) {
+class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: Color, angle: Float = 0f) {
     private val vertices = listOf(
         Vector2(x, y + height - DIAGONAL_OFFSET),
         Vector2(x + DIAGONAL_OFFSET, y + height),
@@ -24,9 +24,22 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, private val 
         Vector2(x + DIAGONAL_OFFSET, y),
         Vector2(x, y + DIAGONAL_OFFSET)
     )
-    val x = x + width/2
-    val y = y + height/2
+    var x = x + width/2
+    var y = y + height/2
     val r = 40f
+
+    init {
+        rotate(angle)
+    }
+
+    fun move(vec: Vector2){
+        x += vec.x
+        y += vec.y
+        vertices.forEach { vertex ->
+            vertex.x += vec.x
+            vertex.y += vec.y
+        }
+    }
 
     fun rotate(deg: Float){
         val rad = deg.toRad()
@@ -41,13 +54,13 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, private val 
         }
     }
 
-    private fun forEachPair(action: (Vector2, Vector2) -> Unit){
+    fun forEachPair(action: (Vector2, Vector2) -> Unit){
         for (i in vertices.indices){
             action(vertices[i], vertices[(i+1)%vertices.size])
         }
     }
 
-    fun findClosestPoint(ball: Ball): Vector2{
+    private fun findClosestPoint(ball: Ball): Vector2{
         var dist = Float.MAX_VALUE
         var point = Vector2()
         vertices.forEach { vertex ->

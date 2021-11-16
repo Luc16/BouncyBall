@@ -11,6 +11,7 @@ import com.github.Luc16.bouncyball.BouncyBall
 import com.github.Luc16.bouncyball.HEIGHT
 import com.github.Luc16.bouncyball.WIDTH
 import com.github.Luc16.bouncyball.components.Ball
+import com.github.Luc16.bouncyball.utils.randomColor
 import com.github.Luc16.bouncyball.utils.translate
 import ktx.graphics.moveTo
 import ktx.graphics.use
@@ -29,7 +30,7 @@ class BallScreen(game: BouncyBall): CustomScreen(game) {
             WIDTH * nextFloat(),
             HEIGHT * nextFloat(),
             10f,
-            Color(0.1f + nextFloat(), 0.1f + nextFloat(), 0.1f + nextFloat(), 1f),
+            randomColor(0.1f),
             360 * nextFloat()
         )
     }
@@ -51,11 +52,11 @@ class BallScreen(game: BouncyBall): CustomScreen(game) {
 
         speedIncrease = if (accelerometer.x > 50 || accelerometer.y > 50 || accelerometer.z > 50) 100f else 0f
 
-        bounceOfWalls()
         balls.forEachIndexed { i, ball ->
             ball.speed += speedIncrease
             if (ball.speed > 800) ball.speed = 800f
             ball.update(delta)
+            ball.bounceOfWalls(screenRect)
             for(j in i + 1 until balls.size){
                 ball.collideBall(balls[j])
             }
@@ -83,29 +84,6 @@ class BallScreen(game: BouncyBall): CustomScreen(game) {
         if (Gdx.input.isKeyPressed(Input.Keys.S) || Gdx.input.isKeyPressed(Input.Keys.DOWN)) camera.translate(y = -10f)
         if (Gdx.input.isKeyPressed(Input.Keys.D) || Gdx.input.isKeyPressed(Input.Keys.RIGHT)) camera.translate(x = 10f)
 
-    }
-
-    private fun bounceOfWalls(){
-        balls.forEach { ball ->
-            when {
-                ball.x + ball.radius >= screenRect.width -> {
-                    ball.move(screenRect.width - (ball.radius + ball.x), 0f)
-                    ball.bounce(Vector2(-1f, 0f))
-                }
-                ball.x - ball.radius <= 0 -> {
-                    ball.move(-ball.x + ball.radius, 0f)
-                    ball.bounce(Vector2(1f, 0f))
-                }
-                ball.y + ball.radius >= screenRect.height -> {
-                    ball.move(0f, screenRect.height - ball.radius - ball.y)
-                    ball.bounce(Vector2(0f, -1f))
-                }
-                ball.y - ball.radius <= 0 -> {
-                    ball.move(0f, -ball.y + ball.radius)
-                    ball.bounce(Vector2(0f, 1f))
-                }
-            }
-        }
     }
 
 }
