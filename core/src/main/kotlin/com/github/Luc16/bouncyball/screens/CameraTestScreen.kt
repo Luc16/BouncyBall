@@ -15,13 +15,11 @@ import com.github.Luc16.bouncyball.WIDTH
 import com.github.Luc16.bouncyball.components.Ball
 import com.github.Luc16.bouncyball.components.PolygonRect
 import com.github.Luc16.bouncyball.utils.dist2
+import com.github.Luc16.bouncyball.utils.ortho
 import com.github.Luc16.bouncyball.utils.toRad
 import ktx.graphics.circle
 import ktx.graphics.use
-import kotlin.math.abs
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlin.math.*
 
 class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
 
@@ -30,11 +28,7 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
     private val dir = Vector2(sqrt(2f)/2, sqrt(2f)/2)
     private val prevPos = Vector2(ball.x, ball.y)
     private var normal = Vector2()
-
-    override fun show() {
-//        wall.body.rotate(-60f)
-//        viewport.camera.translate(ball.x, ball.y, 0f)
-    }
+    private var o = 0f
 
     override fun render(delta: Float) {
         when {
@@ -51,6 +45,17 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
                     ball.move(dir.x*offset, dir.y*offset)
                 }
             }
+            (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) -> {
+                prevPos.set(ball.x, ball.y)
+                val (collided, depth, n) = wall.collideBall(ball)
+                normal = n
+                if (collided){
+                    val offset = -depth/dir.dot(normal)
+                    o = offset/50
+                }
+            }
+            (Gdx.input.isKeyPressed(Input.Keys.O)) -> ball.move(dir.x*o, dir.y*o)
+            (Gdx.input.isKeyPressed(Input.Keys.P)) -> println(sqrt(dist2(prevPos, ball.pos)))
             (Gdx.input.isKeyPressed(Input.Keys.W)) -> wall.rotate(1f)
             (Gdx.input.isKeyPressed(Input.Keys.S)) -> wall.rotate(-1f)
 
@@ -58,6 +63,7 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
 
 
         viewport.apply()
+        val tg = normal.ortho()
         renderer.use(ShapeRenderer.ShapeType.Line, viewport.camera.combined){
             renderer.color = Color.RED
             renderer.circle(ball.x, ball.y, 5f)
@@ -65,52 +71,15 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
             renderer.circle(ball.x, ball.y, ball.radius)
             renderer.color = Color.YELLOW
             renderer.line(-225f, -225f, 225f, 225f)
+            renderer.color = Color.LIGHT_GRAY
+            val m = tg.y/tg.x
+            renderer.line(-WIDTH/2, m*(-WIDTH/2),WIDTH/2, m*(WIDTH/2))
             renderer.color = Color.RED
-//            renderer.circle(p, 10f)
 
             renderer.line(wall.x, wall.y, wall.x + normal.x*100f, wall.y + normal.y*100 )
             wall.draw(renderer)
         }
     }
-
-    private fun handleInput(){
-        val speed = 20f
-        ball.run {
-            if(keyPressed(Input.Keys.W)) {
-               viewport.camera.translate(0f, speed, 0f)
-                y += speed
-            }
-            if(keyPressed(Input.Keys.A)) {
-               viewport.camera.translate(-speed, 0f, 0f)
-                x -= speed
-            }
-            if(keyPressed(Input.Keys.S)) {
-               viewport.camera.translate(0f, -speed, 0f)
-                y -= speed
-            }
-            if(keyPressed(Input.Keys.D)) {
-               viewport.camera.translate(speed, 0f, 0f)
-                x += speed
-            }
-            if (x + radius > WIDTH){
-               viewport.camera.translate(WIDTH - x - radius, 0f, 0f)
-                x = WIDTH - radius
-            } else if (x - radius < 0) {
-               viewport.camera.translate(-(x - radius), 0f, 0f)
-                x = radius
-            }
-
-            if (y + radius > HEIGHT){
-               viewport.camera.translate(0f, HEIGHT - y - radius, 0f)
-                y = HEIGHT - radius
-            } else if (y - radius < 0) {
-               viewport.camera.translate(0f, -(y -radius), 0f)
-                y = radius
-            }
-        }
-    }
-
-    private fun keyPressed(key: Int): Boolean = Gdx.input.isKeyPressed(key)
-
+    
 
 }
