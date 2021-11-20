@@ -9,7 +9,7 @@ import kotlin.random.Random
 
 fun Float.toRad(): Float = PI.toFloat() * this/180
 
-fun Float.sign(): Float = if (this < 0) -1f else 1f
+fun Vector2.ortho(): Vector2 = Vector2(-this.y, this.x)
 
 fun Camera.translate(x: Float = 0f, y: Float = 0f) {
     translate(x, y, 0f)

@@ -4,25 +4,33 @@ import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Vector2
 import com.github.Luc16.bouncyball.utils.dist2
-import com.github.Luc16.bouncyball.utils.sign
 import com.github.Luc16.bouncyball.utils.toRad
 import kotlin.math.*
 
 const val DIAGONAL_OFFSET = 1f
 
 class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: Color, angle: Float = 0f) {
-    private val vertices = listOf(
-        Vector2(x, y + height - DIAGONAL_OFFSET),
-        Vector2(x + DIAGONAL_OFFSET, y + height),
+//    private val vertices = listOf(
+//        Vector2(x, y + height - DIAGONAL_OFFSET),
+//        Vector2(x + DIAGONAL_OFFSET, y + height),
+//
+//        Vector2(x + width, y + height + DIAGONAL_OFFSET),
+//        Vector2(x + width + DIAGONAL_OFFSET, y + height),
+//
+//        Vector2(x + width + DIAGONAL_OFFSET, y),
+//        Vector2(x + width, y - DIAGONAL_OFFSET),
+//
+//        Vector2(x + DIAGONAL_OFFSET, y),
+//        Vector2(x, y + DIAGONAL_OFFSET)
+//    )
+    val vertices = listOf(
+        Vector2(x, y + height),
 
-        Vector2(x + width, y + height + DIAGONAL_OFFSET),
-        Vector2(x + width + DIAGONAL_OFFSET, y + height),
+        Vector2(x + width, y + height),
 
-        Vector2(x + width + DIAGONAL_OFFSET, y),
-        Vector2(x + width, y - DIAGONAL_OFFSET),
+        Vector2(x + width, y),
 
-        Vector2(x + DIAGONAL_OFFSET, y),
-        Vector2(x, y + DIAGONAL_OFFSET)
+        Vector2(x, y),
     )
     var x = x + width/2
     var y = y + height/2
@@ -60,7 +68,7 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
         }
     }
 
-    private fun findClosestPoint(ball: Ball): Vector2{
+    fun findClosestPoint(ball: Ball): Vector2{
         var dist = Float.MAX_VALUE
         var point = Vector2()
         vertices.forEach { vertex ->
@@ -77,9 +85,9 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
         var depth = Float.MAX_VALUE
         val normal = Vector2()
 
-        var colliding = true
+        var colliding = false
         forEachPair { v1, v2 ->
-            if (!colliding) return@forEachPair
+            if (colliding) return@forEachPair
 
             val axis = Vector2(v1.y - v2.y, v2.x - v1.x)
             axis.nor()
@@ -88,7 +96,7 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
             val (minB, maxB) = ball.projectCircle(axis)
 
             if (minB >= maxPR || minPR >= maxB) {
-                colliding = false
+                colliding = true
                 return@forEachPair
             }
 
@@ -100,7 +108,7 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
             }
 
         }
-        if (!colliding) return Triple(false, 0f, Vector2())
+        if (colliding) return Triple(false, 0f, Vector2())
 
         val closestPoint = findClosestPoint(ball)
 
@@ -137,8 +145,6 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
         }
         return Pair(min, max)
     }
-
-
 
     fun draw(renderer: ShapeRenderer){
         renderer.color = color

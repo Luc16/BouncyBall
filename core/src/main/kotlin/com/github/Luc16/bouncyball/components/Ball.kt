@@ -11,6 +11,7 @@ import com.badlogic.gdx.math.Rectangle
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.math.tan
 
 const val MAX_SPEED = 600f
 const val DECELERATION = 72f
@@ -82,6 +83,11 @@ open class Ball(var x: Float,
         if (max < min) min = max.also { max = min }
 
         return Pair(min, max)
+    }
+
+    fun lineOfMovement(): Pair<Float, Float> {
+        val m = direction.y/direction.x
+        return Pair(m, y - m*x)
     }
 
     fun changeDirection(dir: Vector2){

@@ -23,12 +23,10 @@ import kotlin.math.*
 
 class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
 
-    private val ball = Ball(0f, 0f, 70f)
+    private val ball = Ball(0f, 0f, 70f, angle = 225f)
     private val wall = PolygonRect(-80f, -120f, 90f, 80f, Color.BLUE)
-    private val dir = Vector2(sqrt(2f)/2, sqrt(2f)/2)
     private val prevPos = Vector2(ball.x, ball.y)
     private var normal = Vector2()
-    private var o = 0f
 
     override fun render(delta: Float) {
         when {
@@ -36,32 +34,44 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
                 ball.x = prevPos.x
                 ball.y = prevPos.y
             }
-            (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) -> {
-                prevPos.set(ball.x, ball.y)
-                val (collided, depth, n) = wall.collideBall(ball)
-                normal = n
-                if (collided){
-                    val offset = -depth/dir.dot(normal)
-                    ball.move(dir.x*offset, dir.y*offset)
-                }
-            }
             (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) -> {
                 prevPos.set(ball.x, ball.y)
-                val (collided, depth, n) = wall.collideBall(ball)
-                normal = n
+                val (collided, depth, nor) = wall.collideBall(ball)
+                normal = nor
                 if (collided){
-                    val offset = -depth/dir.dot(normal)
-                    o = offset/50
+                    val offset = -depth/ball.direction.dot(normal)
+                    ball.move(ball.direction.x*offset, ball.direction.y*offset)
                 }
             }
-            (Gdx.input.isKeyPressed(Input.Keys.O)) -> ball.move(dir.x*o, dir.y*o)
-            (Gdx.input.isKeyPressed(Input.Keys.P)) -> println(sqrt(dist2(prevPos, ball.pos)))
+            (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) -> {
+                prevPos.set(ball.x, ball.y)
+                val (collided, depth, nor) = wall.collideBall(ball)
+                normal = nor
+                if (collided){
+                    val offset = -depth/ball.direction.dot(normal)
+                    val tg = normal.ortho()
+                    ball.move(ball.direction.x*offset, ball.direction.y*offset)
+                    val vertex = wall.findClosestPoint(ball)
+                    if (abs(ball.pos.dot(tg)) > abs(vertex.dot(tg))) { // Condição precisa de ajustes
+                        val (m, n) = ball.lineOfMovement()
+                        val a = (1 + m*m)
+                        val b = (vertex.x + m*vertex.y - n*m)//*2
+                        val c = (vertex.x*vertex.x + (vertex.y - n)*(vertex.y - n) - ball.radius2)
+                        val sqrtDelta = sqrt(b*b - a*c)
+                        val x1 = (b + sqrtDelta)/a
+                        val p1 = Vector2(x1, m*x1+n)
+                        val x2 = (b - sqrtDelta)/a
+                        val p2 = Vector2(x2, m*x2+n)
+
+                        val pf = if (dist2(ball.pos, p1) < dist2(ball.pos, p2)) p1 else p2
+                        ball.move(pf.x - ball.x, pf.y - ball.y)
+                    }
+                }
+            }
             (Gdx.input.isKeyPressed(Input.Keys.W)) -> wall.rotate(1f)
             (Gdx.input.isKeyPressed(Input.Keys.S)) -> wall.rotate(-1f)
 
         }
-
-
         viewport.apply()
         val tg = normal.ortho()
         renderer.use(ShapeRenderer.ShapeType.Line, viewport.camera.combined){
@@ -70,15 +80,17 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
             renderer.color = Color.WHITE
             renderer.circle(ball.x, ball.y, ball.radius)
             renderer.color = Color.YELLOW
-            renderer.line(-225f, -225f, 225f, 225f)
+            val m1 = ball.direction.y/ball.direction.x
+            renderer.line(-WIDTH/2, m1*(-WIDTH/2),WIDTH/2, m1*(WIDTH/2))
             renderer.color = Color.LIGHT_GRAY
-            val m = tg.y/tg.x
-            renderer.line(-WIDTH/2, m*(-WIDTH/2),WIDTH/2, m*(WIDTH/2))
+            val m2 = tg.y/tg.x
+            renderer.line(-WIDTH/2, m2*(-WIDTH/2),WIDTH/2, m2*(WIDTH/2))
             renderer.color = Color.RED
 
             renderer.line(wall.x, wall.y, wall.x + normal.x*100f, wall.y + normal.y*100 )
             wall.draw(renderer)
         }
+
     }
     
 
