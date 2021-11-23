@@ -7,6 +7,8 @@ import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 import com.github.Luc16.bouncyball.BouncyBall
+import com.github.Luc16.bouncyball.HEIGHT
+import com.github.Luc16.bouncyball.WIDTH
 import com.github.Luc16.bouncyball.components.Ball
 import com.github.Luc16.bouncyball.components.PlayerBall
 import com.github.Luc16.bouncyball.components.PolygonRect
@@ -18,16 +20,49 @@ import ktx.graphics.use
 import kotlin.random.Random
 
 const val CLICK_MARGIN = 100f
+const val N_BALLS = 2000
+
+fun createBallList(size: Int, screenRect: Rectangle, walls: List<PolygonRect>): List<Ball> {
+    return List(size){
+        var b = Ball(
+            (screenRect.width - 10f) * Random.nextFloat(),
+            (screenRect.height - 10f) * Random.nextFloat(),
+            10f,
+            randomColor(0.1f),
+            360 * Random.nextFloat()
+        )
+        var col = true
+        while (col) {
+            b = Ball(
+                (screenRect.width - 10f) * Random.nextFloat(),
+                (screenRect.height - 10f) * Random.nextFloat(),
+                10f,
+                randomColor(0.1f),
+                360 * Random.nextFloat()
+            )
+            col = false
+            walls.forEach {
+                val (c, d, n) = it.collideBall(b)
+                if (c) {
+                    col = c
+                    return@forEach
+                }
+            }
+        }
+        b
+    }
+}
 
 class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
     private val screenRect = Rectangle(0f, 0f, 1280f*2, 1600f)
     private val walls = List(40){ i ->
         val numY = 5*screenRect.width.toInt()/1280
         val k = i/numY
-        PolygonRect(50f+250*(i%numY), 200f + 400*k, 200f, 50f, randomColor(0.3f), 180*Random.nextFloat())
+        PolygonRect(50f+250*(i%numY), 200f + 400*k, 200f, 50f, randomColor(0.3f), 0f)//180*Random.nextFloat())
     }
+    private var balls = createBallList(N_BALLS, screenRect, walls)
     private val camera = viewport.camera
-    private val ball = PlayerBall(100f, 100f, 10f, camera)
+    private val ball = PlayerBall(291f, 325.47528f, 10f, camera)
     private var prevPos = Vector2().setZero()
     private val miniMapRatio = 0.1f
 
@@ -40,14 +75,31 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
 
         ball.update(delta)
         ball.bounceOfWalls(screenRect)
-        walls.forEach { ball.collideWall(it) }
-
+        balls.forEach { ball ->
+            ball.update(delta)
+            ball.bounceOfWalls(screenRect)
+        }
+        walls.forEach { wall ->
+            ball.collideWallDirected(wall)
+            balls.forEach { ball ->
+                ball.collideWallDirected(wall)
+            }
+        }
         draw()
+//        if (!n.isZero){
+//            renderer.use(ShapeRenderer.ShapeType.Line, camera) {
+//                renderer.color = Color.RED
+//                renderer.line(ball.x, ball.y, ball.x + 100*n.x, ball.y + 100*n.y)
+//            }
+//        }
     }
 
     private fun handleInputs(){
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1) ||
         Gdx.input.isTouched(0) && Gdx.input.isTouched(1)) game.setScreen<BallScreen>()
+
+        if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) ball.speed = 0f
+        if (Gdx.input.isKeyJustPressed(Input.Keys.R)) balls = createBallList(N_BALLS, screenRect, walls)
 
         val touchPoint = Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
         viewport.unproject(touchPoint)
@@ -55,7 +107,7 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
             when {
                 (Gdx.input.isTouched || Gdx.input.isButtonPressed(Input.Buttons.LEFT)) &&
                         dist2(touchPoint, wall.x, wall.y) <= wall.r*wall.r -> {
-                    ball.speed = 0f
+//                    ball.speed = 0f
                     wall.rotate(1f)
                     prevPos.setZero()
                 }
@@ -118,6 +170,7 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
             }
             renderer.color = Color.YELLOW
             ball.draw(renderer)
+            balls.forEach { it.draw(renderer) }
         }
         showMinimap(renderer)
 

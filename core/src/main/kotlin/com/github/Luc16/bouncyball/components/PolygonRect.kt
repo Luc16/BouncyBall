@@ -23,14 +23,11 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
 //        Vector2(x + DIAGONAL_OFFSET, y),
 //        Vector2(x, y + DIAGONAL_OFFSET)
 //    )
-    val vertices = listOf(
+    private val vertices = listOf(
         Vector2(x, y + height),
-
         Vector2(x + width, y + height),
-
         Vector2(x + width, y),
-
-        Vector2(x, y),
+        Vector2(x, y)
     )
     var x = x + width/2
     var y = y + height/2
@@ -62,17 +59,30 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
         }
     }
 
+    fun neighborInLine(vertex: Vector2, vec: Vector2): Vector2{
+        val epsilon = 0.1f
+        var i = vertices.indexOf(vertex)
+        val v1 = vertices[(i+1)%vertices.size]
+        if (abs(abs(vec.dot(v1)) - abs(vec.dot(vertex))) < epsilon) return v1
+
+        i = if (i - 1 < 0) vertices.lastIndex else i - 1
+        val v2 = vertices[i]
+        if (abs(abs(vec.dot(v2)) - abs(vec.dot(vertex))) < epsilon) return v2
+
+        return Vector2()
+    }
+
     fun forEachPair(action: (Vector2, Vector2) -> Unit){
         for (i in vertices.indices){
             action(vertices[i], vertices[(i+1)%vertices.size])
         }
     }
 
-    fun findClosestPoint(ball: Ball): Vector2{
+    fun findClosestPoint(pos: Vector2): Vector2{
         var dist = Float.MAX_VALUE
         var point = Vector2()
         vertices.forEach { vertex ->
-            val d = dist2(vertex, ball.x, ball.y)
+            val d = dist2(vertex, pos)
             if (d < dist) {
                 dist = d
                 point = vertex
@@ -102,6 +112,7 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
 
             val axisDepth = min(maxB - minPR, maxPR - minB)
 
+
             if (axisDepth < depth){
                 normal.set(axis)
                 depth = axisDepth
@@ -110,9 +121,9 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
         }
         if (colliding) return Triple(false, 0f, Vector2())
 
-        val closestPoint = findClosestPoint(ball)
+        val closestPoint = findClosestPoint(ball.pos)
 
-        val axis = Vector2(ball.y - closestPoint.y, closestPoint.x - ball.x)
+        val axis = Vector2(closestPoint.x - ball.x, closestPoint.y - ball.y)
         axis.nor()
 
         val (minPR, maxPR) = projectVertices(axis)
@@ -122,11 +133,11 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
             return Triple(false, 0f, Vector2())
         }
 
-        val axisDepth = min(maxB - minPR, maxPR - minB)
-        if (axisDepth < depth){
-            normal.set(axis)
-            depth = axisDepth
-        }
+//        val axisDepth = min(maxB - minPR, maxPR - minB)
+//        if (axisDepth < depth){
+//            normal.set(axis)
+//            depth = axisDepth
+//        }
 
         val direction = Vector2(x - ball.x, y - ball.y)
 

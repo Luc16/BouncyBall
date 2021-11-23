@@ -8,13 +8,12 @@ import com.github.Luc16.bouncyball.utils.toRad
 import com.github.Luc16.bouncyball.utils.translate
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.math.Rectangle
-import kotlin.math.cos
-import kotlin.math.sin
-import kotlin.math.sqrt
-import kotlin.math.tan
+import com.github.Luc16.bouncyball.utils.ortho
+import java.lang.Float.NaN
+import kotlin.math.*
 
 const val MAX_SPEED = 600f
-const val DECELERATION = 72f
+const val DECELERATION = 0f
 
 open class Ball(var x: Float,
                 var y: Float,
@@ -26,7 +25,7 @@ open class Ball(var x: Float,
 ) {
     val direction = Vector2(cos(angle.toRad()), sin(angle.toRad()))
     val pos: Vector2 get() = Vector2(x, y)
-    val radius2 get() = radius*radius
+    private val radius2 get() = radius*radius
 
     open fun move(valX: Float, valY: Float){
         x += valX
@@ -60,8 +59,73 @@ open class Ball(var x: Float,
     fun collideWall(wall: PolygonRect){
         val (collided, depth, normal) = wall.collideBall(this)
         if (collided){
-            bounce(normal)
             move(-normal.x*depth, -normal.y*depth)
+        }
+    }
+
+    fun collideWallDirected(wall: PolygonRect) {
+        var (collided, depth, normal) = wall.collideBall(this)
+        if (collided) {
+//            println("BATEU")
+            // gets the intended offset
+            var offset = depth/direction.dot(normal)
+            offset = if (abs(offset) < speed) offset else speed
+            val tg = normal.ortho()
+            move(-direction.x*offset, -direction.y*offset)
+
+            // sees if moving this way will cause the ball to stay out of the Polly
+            val vertex = wall.findClosestPoint(pos)
+            val neighbor = wall.neighborInLine(vertex, normal)
+            val dv = tg.dot(vertex)
+            val dn = tg.dot(neighbor)
+            val db = tg.dot(pos)
+            if (db > max(dv, dn) || db < min(dv, dn)) {
+                // Corrects the movement
+                val (m, n, xIsDependent) = lineOfMovement()
+                val p1: Vector2
+                val p2: Vector2
+                if (xIsDependent){
+                    val a = (1 + m*m)
+                    val b = (vertex.y + m*vertex.x - n*m)//*2
+                    val c = (vertex.y*vertex.y + (vertex.x - n)*(vertex.x - n) - radius2)
+                    val sqrtDelta = sqrt(b*b - a*c)
+                    if (sqrtDelta.isNaN()) {
+                        println("x is dependent and the direction is: $direction")
+                        println("x = $m*y + $n")
+                        println("a: $a, b: $b, c: $c, delta: ${b*b - a*c}")
+                        println("Ball pos: $pos")
+                        throw Exception("Sqrt is NaN")
+                    }
+                    val y1 = (b + sqrtDelta)/a
+                    p1 = Vector2(m*y1+n, y1)
+                    val y2 = (b - sqrtDelta)/a
+                    p2 = Vector2(m*y2+n, y2)
+                } else {
+                    val a = (1 + m*m)
+                    val b = (vertex.x + m*vertex.y - n*m)//*2
+                    val c = (vertex.x*vertex.x + (vertex.y - n)*(vertex.y - n) - radius2)
+                    val sqrtDelta = sqrt(b*b - a*c)
+                    if (sqrtDelta.isNaN()) {
+                        println("x is independent and the direction is: $direction")
+                        println("y = $m*x + $n")
+                        println("a: $a, b: $b, c: $c, delta: ${b*b - a*c}")
+                        println("Ball pos: $pos")
+                        throw Exception("Sqrt is NaN")
+                    }
+                    val x1 = (b + sqrtDelta)/a
+                    p1 = Vector2(x1, m*x1+n)
+                    val x2 = (b - sqrtDelta)/a
+                    p2 = Vector2(x2, m*x2+n)
+                }
+
+                val pf = if (dist2(p1, pos) < dist2(pos, p2)) p1 else p2
+                val dir = Vector2(x - vertex.x, y - vertex.y)
+                val n1 = Vector2(normal.x + tg.x, normal.y + tg.y)
+                val n2 = n1.ortho()
+                normal = if (abs(dir.dot(n1)) > abs(dir.dot(n2))) n1 else n2
+                move(pf.x - x, pf.y - y)
+            }
+            bounce(normal)
         }
     }
 
@@ -85,9 +149,13 @@ open class Ball(var x: Float,
         return Pair(min, max)
     }
 
-    fun lineOfMovement(): Pair<Float, Float> {
+    fun lineOfMovement(): Triple<Float, Float, Boolean> {
+        if (abs(direction.y) > abs(direction.x)){
+            val m = direction.x/direction.y
+            return Triple(m, x - m*y, true)
+        }
         val m = direction.y/direction.x
-        return Pair(m, y - m*x)
+        return Triple(m, y - m*x, false)
     }
 
     fun changeDirection(dir: Vector2){
