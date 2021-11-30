@@ -28,10 +28,13 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
     private val wall = PolygonRect(-80f, -120f, 90f, 80f, Color.BLUE)
     private val prevPos = Vector2(ball.x, ball.y)
     private var normal = Vector2()
+    private var v = Vector2()
 
     override fun render(delta: Float) {
         ball.update(delta)
-        ball.collideWallDirected(wall)
+        val (v0, _) = ball.collideWallDirected(wall, delta)
+        v = if(!v0.isZero) v0 else v
+        handleSwipe()
         when {
             (Gdx.input.isKeyPressed(Input.Keys.NUM_1)) -> game.setScreen<PrototypeScreen>()
             (Gdx.input.isKeyJustPressed(Input.Keys.R)) -> {
@@ -50,7 +53,7 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
             }
             (Gdx.input.isKeyJustPressed(Input.Keys.ENTER)) -> {
                 prevPos.set(ball.x, ball.y)
-                ball.collideWallDirected(wall)
+                ball.collideWallDirected(wall, delta)
             }
             (Gdx.input.isKeyPressed(Input.Keys.W)) -> wall.rotate(1f)
             (Gdx.input.isKeyPressed(Input.Keys.S)) -> wall.rotate(-1f)
@@ -62,15 +65,36 @@ class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
             renderer.circle(ball.x, ball.y, 5f)
             renderer.color = Color.WHITE
             renderer.circle(ball.x, ball.y, ball.radius)
-            renderer.color = Color.YELLOW
-            val (m, n) = ball.lineOfMovement()
-            renderer.line(-WIDTH/2, m*(-WIDTH/2) + n,WIDTH/2, m*(WIDTH/2) + n)
-            renderer.color = Color.RED
 
+            renderer.color = Color.FOREST
+            renderer.circle(v.x, v.y, ball.radius)
+            renderer.color = Color.YELLOW
+            renderer.line(wall.x, wall.y, wall.x + wall.normalH.x*100f, wall.y + wall.normalH.y*100 )
+            renderer.color = Color.BROWN
+            renderer.line(wall.x, wall.y, wall.x + wall.normalW.x*100f, wall.y + wall.normalW.y*100 )
+
+            renderer.color = Color.RED
             renderer.line(wall.x, wall.y, wall.x + normal.x*100f, wall.y + normal.y*100 )
             wall.draw(renderer)
         }
 
+    }
+
+    private fun handleSwipe(){
+        when {
+            Gdx.input.justTouched() || Gdx.input.isButtonJustPressed(Input.Buttons.LEFT) -> {
+                prevPos.set(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
+            }
+            (!Gdx.input.isTouched || !Gdx.input.isButtonPressed(Input.Buttons.LEFT)) && !prevPos.isZero  -> {
+                val dir = Vector2(Gdx.input.x.toFloat() - prevPos.x, -(Gdx.input.y.toFloat() - prevPos.y))
+                if (!dir.isZero(CLICK_MARGIN)) ball.changeDirection(dir)
+                viewport.unproject(prevPos)
+                ball.move(prevPos.x - ball.x, prevPos.y - ball.y)
+                prevPos.setZero()
+            }
+            Gdx.input.isKeyJustPressed(Input.Keys.S) -> ball.speed = 0f
+            !Gdx.input.isTouched -> prevPos.setZero()
+        }
     }
     
 

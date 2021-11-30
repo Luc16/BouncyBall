@@ -20,7 +20,7 @@ import ktx.graphics.use
 import kotlin.random.Random
 
 const val CLICK_MARGIN = 100f
-const val N_BALLS = 2000
+const val N_BALLS = 10000
 
 fun createBallList(size: Int, screenRect: Rectangle, walls: List<PolygonRect>): List<Ball> {
     return List(size){
@@ -65,14 +65,31 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
     private val ball = PlayerBall(291f, 325.47528f, 10f, camera)
     private var prevPos = Vector2().setZero()
     private val miniMapRatio = 0.1f
+    private var numFrames = 0
+    private var v = Vector2(1f, 1f)
+    private var end = false
+    private var idx = -1
 
     override fun show() {
         camera.moveTo(ball.pos)
     }
 
     override fun render(delta: Float) {
+        if (end){
+            camera.moveTo(v)
+            val touchPoint = Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())
+            viewport.unproject(touchPoint)
+            if (Gdx.input.isButtonJustPressed(Input.Buttons.LEFT)) println(touchPoint)
+            draw()
+            renderer.use(ShapeRenderer.ShapeType.Filled, camera){
+                it.color = Color.WHITE
+                it.circle(v.x, v.y, 10f)
+                it.color = Color.YELLOW
+                it.circle(balls[idx].x, balls[idx].y, 10f)
+            }
+            return
+        }
         handleInputs()
-
         ball.update(delta)
         ball.bounceOfWalls(screenRect)
         balls.forEach { ball ->
@@ -80,18 +97,25 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
             ball.bounceOfWalls(screenRect)
         }
         walls.forEach { wall ->
-            ball.collideWallDirected(wall)
-            balls.forEach { ball ->
-                ball.collideWallDirected(wall)
+            ball.collideWallDirected(wall, delta)
+            balls.forEachIndexed {i, ball ->
+                val (v1, end1) = ball.collideWallDirected(wall, delta)
+                v = v1
+                end = end1
+                if (numFrames >= 1 && end1){
+                    end = end1
+                    idx = i
+                    return
+                }
             }
         }
         draw()
-//        if (!n.isZero){
-//            renderer.use(ShapeRenderer.ShapeType.Line, camera) {
-//                renderer.color = Color.RED
-//                renderer.line(ball.x, ball.y, ball.x + 100*n.x, ball.y + 100*n.y)
-//            }
-//        }
+
+        numFrames++
+        if (numFrames > 10){
+            numFrames = 0
+            balls = createBallList(N_BALLS, screenRect, walls)
+        }
     }
 
     private fun handleInputs(){

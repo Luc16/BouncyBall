@@ -32,6 +32,8 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
     var x = x + width/2
     var y = y + height/2
     val r = 40f
+    val normalW: Vector2 get() = Vector2(vertices[1].x - vertices[0].x, vertices[1].y - vertices[0].y).nor()
+    val normalH: Vector2 get() = Vector2(vertices[0].x - vertices[3].x, vertices[0].y - vertices[3].y).nor()
 
     init {
         rotate(angle)
@@ -91,7 +93,7 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
         return point
     }
 
-    fun collideBall(ball: Ball): Triple<Boolean, Float, Vector2> {
+    fun collideBallSAT(ball: Ball): Triple<Boolean, Float, Vector2> {
         var depth = Float.MAX_VALUE
         val normal = Vector2()
 
@@ -133,11 +135,11 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
             return Triple(false, 0f, Vector2())
         }
 
-//        val axisDepth = min(maxB - minPR, maxPR - minB)
-//        if (axisDepth < depth){
-//            normal.set(axis)
-//            depth = axisDepth
-//        }
+        val axisDepth = min(maxB - minPR, maxPR - minB)
+        if (axisDepth < depth){
+            normal.set(axis)
+            depth = axisDepth
+        }
 
         val direction = Vector2(x - ball.x, y - ball.y)
 
@@ -146,15 +148,91 @@ class PolygonRect( x: Float, y: Float, width: Float, height: Float, val color: C
         return Triple(true, depth, normal)
     }
 
+    fun collideBall(ball: Ball): Triple<Boolean, Float, Vector2> {
+        var depth = Float.MAX_VALUE
+        val normal = Vector2()
+        val colDir = collisionDirection(ball.direction)
+        val vecList = when(colDir){
+            0 -> listOf(normalW, normalH)
+            1 -> listOf(normalW, normalH.scl(-1f))
+            2 -> listOf(normalW.scl(-1f), normalH.scl(-1f))
+            3 -> listOf(normalW.scl(-1f), normalH)
+            else -> listOf()
+        }
+        val vertex = vertices[colDir]
+        val neighbors = listOf(
+            vertices[(colDir+1)%vertices.size],
+            vertices[if (colDir - 1 < 0) vertices.lastIndex else colDir - 1]
+        )
+
+        vecList.forEach { vec ->
+
+            val (minPR, maxPR) = projectVertices(vec)
+            val (minB, maxB) = ball.projectCircle(vec)
+            if (minB >= maxPR || minPR >= maxB) {
+                return Triple(false, 0f, Vector2())
+            }
+
+            val axisDepth = min(maxB - minPR, maxPR - minB)
+
+            val neighbor = neighborInLine(vertex, vec)
+            val other = if (neighbor == neighbors[0]) neighbors[1] else neighbors[0]
+            if (axisDepth < depth && (dist2(ball.pos, other) > dist2(ball.pos, vertex))){
+                normal.set(vec)
+                depth = axisDepth
+            }
+
+        }
+
+        val closestPoint = findClosestPoint(ball.pos)
+        val axis = Vector2(closestPoint.x - ball.x, closestPoint.y - ball.y)
+        axis.nor()
+        val (minPR, maxPR) = projectVertices(axis)
+        val (minB, maxB) = ball.projectCircle(axis)
+        if (minB >= maxPR || minPR >= maxB) {
+            return Triple(false, 0f, Vector2())
+        }
+
+        val direction = Vector2(x - ball.x, y - ball.y)
+
+        if (direction.dot(normal) < 0f) normal.scl(-1f)
+
+        return Triple(true, depth, normal)
+    }
+
+    private fun collisionDirection(dir: Vector2): Int{
+        val dotW = dir.dot(normalW)
+        val dotH = dir.dot(normalH)
+        return when {
+            dotH <= 0 && dotW >= 0 -> 0
+            dotH <= 0 && dotW <= 0 -> 1
+            dotH >= 0 && dotW <= 0 -> 2
+            dotH >= 0 && dotW >= 0 -> 3
+            else -> 1
+        }
+    }
+
+    fun collisionVertex(dir: Vector2): Vector2 = vertices[collisionDirection(dir)]
+
     private fun projectVertices(axis: Vector2): Pair<Float, Float> {
         var min = Float.MAX_VALUE
-        var max = Float.MIN_VALUE
+        var max = -Float.MAX_VALUE
         vertices.forEach { vertex ->
             val projection = vertex.dot(axis)
             min = min(projection, min)
             max = max(projection, max)
         }
         return Pair(min, max)
+    }
+
+    fun containsPoint(point: Vector2): Boolean{
+        val vecList = listOf(normalW, normalH)
+        vecList.forEachIndexed {idx, vec ->
+            val d1 =  vertices[1].dot(vec)
+            val d2 = if (idx == 1) vertices[2].dot(vec) else vertices[0].dot(vec)
+            if (point.dot(vec) !in min(d1, d2)..max(d1,d2)) return false
+        }
+        return true
     }
 
     fun draw(renderer: ShapeRenderer){

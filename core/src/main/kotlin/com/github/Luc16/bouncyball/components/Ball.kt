@@ -38,7 +38,8 @@ open class Ball(var x: Float,
     }
 
     open fun update(delta: Float){
-        move(direction.x*speed*delta, direction.y*speed*delta)
+        move(direction.x*10f, direction.y*10f) //???????????
+//        move(direction.x*speed*delta, direction.y*speed*delta)
         speed -= deceleration*delta
         if (speed < 0) speed = 0f
     }
@@ -63,18 +64,24 @@ open class Ball(var x: Float,
         }
     }
 
-    fun collideWallDirected(wall: PolygonRect) {
+    fun collideWallDirected(wall: PolygonRect, delta: Float): Pair<Vector2, Boolean> {
         var (collided, depth, normal) = wall.collideBall(this)
         if (collided) {
-//            println("BATEU")
+
+            val vertex = wall.findClosestPoint(pos)
             // gets the intended offset
             var offset = depth/direction.dot(normal)
-            offset = if (abs(offset) < speed) offset else speed
+            offset = if (abs(offset) < speed*delta) offset else speed*delta
             val tg = normal.ortho()
+
+
+            val prevPos = pos
+
+
             move(-direction.x*offset, -direction.y*offset)
 
             // sees if moving this way will cause the ball to stay out of the Polly
-            val vertex = wall.findClosestPoint(pos)
+//            val vertex = wall.findClosestPoint(pos)
             val neighbor = wall.neighborInLine(vertex, normal)
             val dv = tg.dot(vertex)
             val dn = tg.dot(neighbor)
@@ -88,12 +95,19 @@ open class Ball(var x: Float,
                     val a = (1 + m*m)
                     val b = (vertex.y + m*vertex.x - n*m)//*2
                     val c = (vertex.y*vertex.y + (vertex.x - n)*(vertex.x - n) - radius2)
-                    val sqrtDelta = sqrt(b*b - a*c)
+                    var dt = b*b - a*c
+                    dt = if (abs(dt) < 0.005*b) 0f else dt
+                    val sqrtDelta = sqrt(dt)
                     if (sqrtDelta.isNaN()) {
-                        println("x is dependent and the direction is: $direction")
-                        println("x = $m*y + $n")
                         println("a: $a, b: $b, c: $c, delta: ${b*b - a*c}")
+                        return Pair(vertex, false)
+                        println("x is dependent and the direction is: $direction \n" +
+                                "and it moved $offset at speed: ${speed*delta} and delta: $delta (original offset ${depth/direction.dot(normal)}")
+                        println("a: $a, b: $b, c: $c, delta: ${b*b - a*c}")
+                        println("Vertex: $vertex")
+                        println("Normal: $normal")
                         println("Ball pos: $pos")
+                        return Pair(prevPos, true)
                         throw Exception("Sqrt is NaN")
                     }
                     val y1 = (b + sqrtDelta)/a
@@ -104,12 +118,19 @@ open class Ball(var x: Float,
                     val a = (1 + m*m)
                     val b = (vertex.x + m*vertex.y - n*m)//*2
                     val c = (vertex.x*vertex.x + (vertex.y - n)*(vertex.y - n) - radius2)
-                    val sqrtDelta = sqrt(b*b - a*c)
+                    var dt = b*b - a*c
+                    dt = if (abs(dt) < 0.005*b) 0f else dt
+                    val sqrtDelta = sqrt(dt)
                     if (sqrtDelta.isNaN()) {
-                        println("x is independent and the direction is: $direction")
-                        println("y = $m*x + $n")
                         println("a: $a, b: $b, c: $c, delta: ${b*b - a*c}")
+                        return Pair(vertex, false)
+                        println("x is independent and the direction is: $direction \n" +
+                                "and it moved $offset at speed: ${speed*delta} and delta: $delta (original offset ${depth/direction.dot(normal)}")
+                        println("a: $a, b: $b, c: $c, delta: ${b*b - a*c}")
+                        println("Vertex: $vertex")
+                        println("Normal: $normal")
                         println("Ball pos: $pos")
+                        return Pair(prevPos, true)
                         throw Exception("Sqrt is NaN")
                     }
                     val x1 = (b + sqrtDelta)/a
@@ -126,7 +147,9 @@ open class Ball(var x: Float,
                 move(pf.x - x, pf.y - y)
             }
             bounce(normal)
+            return Pair(vertex, false)
         }
+        return Pair(Vector2(), false)
     }
 
     private fun bounce(normal: Vector2){
@@ -149,7 +172,7 @@ open class Ball(var x: Float,
         return Pair(min, max)
     }
 
-    fun lineOfMovement(): Triple<Float, Float, Boolean> {
+    private fun lineOfMovement(): Triple<Float, Float, Boolean> {
         if (abs(direction.y) > abs(direction.x)){
             val m = direction.x/direction.y
             return Triple(m, x - m*y, true)
