@@ -20,7 +20,7 @@ import ktx.graphics.use
 import kotlin.random.Random
 
 const val CLICK_MARGIN = 100f
-const val N_BALLS = 10000
+const val N_BALLS = 0
 
 fun createBallList(size: Int, screenRect: Rectangle, walls: List<PolygonRect>): List<Ball> {
     return List(size){
@@ -112,10 +112,10 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
         draw()
 
         numFrames++
-        if (numFrames > 10){
-            numFrames = 0
-            balls = createBallList(N_BALLS, screenRect, walls)
-        }
+//        if (numFrames > 10){
+//            numFrames = 0
+//            balls = createBallList(N_BALLS, screenRect, walls)
+//        }
     }
 
     private fun handleInputs(){
@@ -123,6 +123,7 @@ class PrototypeScreen(game: BouncyBall): CustomScreen(game) {
         Gdx.input.isTouched(0) && Gdx.input.isTouched(1)) game.setScreen<BallScreen>()
 
         if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) ball.speed = 0f
+
         if (Gdx.input.isKeyJustPressed(Input.Keys.R)) balls = createBallList(N_BALLS, screenRect, walls)
 
         val touchPoint = Vector2(Gdx.input.x.toFloat(), Gdx.input.y.toFloat())

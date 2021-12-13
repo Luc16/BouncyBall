@@ -24,7 +24,7 @@ import kotlin.math.*
 class CameraTestScreen(game: BouncyBall): CustomScreen(game) {
 
     private val angle = 270f
-    private val ball = Ball(-84f, 300f, 10f, angle = angle, speed = 600f)
+    private val ball = Ball(-84f, 300f, 20f, angle = angle, speed = 600f)
     private val wall = PolygonRect(-80f, -120f, 90f, 80f, Color.BLUE)
     private val prevPos = Vector2(ball.x, ball.y)
     private var normal = Vector2()

@@ -1,22 +1,19 @@
 package com.github.Luc16.bouncyball.components
 
-import com.badlogic.gdx.graphics.Camera
+import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
+import com.badlogic.gdx.math.Rectangle
 import com.badlogic.gdx.math.Vector2
 import com.github.Luc16.bouncyball.utils.dist2
-import com.github.Luc16.bouncyball.utils.toRad
-import com.github.Luc16.bouncyball.utils.translate
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.math.Rectangle
 import com.github.Luc16.bouncyball.utils.ortho
-import java.lang.Float.NaN
+import com.github.Luc16.bouncyball.utils.toRad
 import kotlin.math.*
 
 const val MAX_SPEED = 600f
 const val DECELERATION = 0f
 
-open class Ball(var x: Float,
-                var y: Float,
+open class Ball(iniX: Float,
+                iniY: Float,
                 var radius: Float,
                 private var color: Color = Color.YELLOW,
                 angle: Float = 0f,
@@ -24,7 +21,13 @@ open class Ball(var x: Float,
                 var speed: Float = MAX_SPEED
 ) {
     val direction = Vector2(cos(angle.toRad()), sin(angle.toRad()))
-    val pos: Vector2 get() = Vector2(x, y)
+    val pos = Vector2(iniX, iniY)
+    var x: Float
+        get() = pos.x
+        set(value) {pos.x = value}
+    var y: Float
+        get() = pos.y
+        set(value) {pos.y = value}
     private val radius2 get() = radius*radius
 
     open fun move(valX: Float, valY: Float){
@@ -37,8 +40,12 @@ open class Ball(var x: Float,
         y += vec.y
     }
 
+    fun moveTo(vec: Vector2){
+        move(vec.x - x, vec.y - y)
+    }
+
     open fun update(delta: Float){
-        move(direction.x*10f, direction.y*10f) //???????????
+        move(direction.x*speed/60, direction.y*speed/60) //???????????
 //        move(direction.x*speed*delta, direction.y*speed*delta)
         speed -= deceleration*delta
         if (speed < 0) speed = 0f
@@ -64,14 +71,14 @@ open class Ball(var x: Float,
         }
     }
 
-    fun collideWallDirected(wall: PolygonRect, delta: Float): Pair<Vector2, Boolean> {
+    fun collideWallDirectedV0(wall: PolygonRect, delta: Float): Pair<Vector2, Boolean> {
         var (collided, depth, normal) = wall.collideBall(this)
         if (collided) {
 
             val vertex = wall.findClosestPoint(pos)
             // gets the intended offset
             var offset = depth/direction.dot(normal)
-            offset = if (abs(offset) < speed*delta) offset else speed*delta
+            offset = if (abs(offset) < speed/60) offset else speed/60 // temporario
             val tg = normal.ortho()
 
 
@@ -100,6 +107,7 @@ open class Ball(var x: Float,
                     val sqrtDelta = sqrt(dt)
                     if (sqrtDelta.isNaN()) {
                         println("a: $a, b: $b, c: $c, delta: ${b*b - a*c}")
+                        println("direction: $direction")
                         return Pair(vertex, false)
                         println("x is dependent and the direction is: $direction \n" +
                                 "and it moved $offset at speed: ${speed*delta} and delta: $delta (original offset ${depth/direction.dot(normal)}")
@@ -147,6 +155,53 @@ open class Ball(var x: Float,
                 move(pf.x - x, pf.y - y)
             }
             bounce(normal)
+            val movementCorrection = speed/60 - sqrt(dist2(prevPos, pos))
+            move(direction.x*movementCorrection, direction.y*movementCorrection)
+            return Pair(vertex, false)
+        }
+        return Pair(Vector2(), false)
+    }
+
+    fun collideWallDirected(wall: PolygonRect, delta: Float): Pair<Vector2, Boolean> {
+        var (collided, depth, normal) = wall.collideBall(this)
+        if (collided) {
+
+            val vertex = wall.findClosestPoint(pos)
+            // gets the intended offset
+            var offset = depth/direction.dot(normal)
+            offset = if (abs(offset) < speed/60) offset else speed/60 // temporario
+            val tg = normal.ortho()
+
+            val newPos = Vector2(x-direction.x*offset, y-direction.y*offset)
+
+            // sees if moving this way will cause the ball to stay out of the Polly
+//            val vertex = wall.findClosestPoint(pos)
+            val neighbor = wall.neighborInLine(vertex, normal)
+            val dv = tg.dot(vertex)
+            val dn = tg.dot(neighbor)
+            val db = tg.dot(newPos)
+            if (db > max(dv, dn) || db < min(dv, dn)) {
+
+                val vec = Vector2(vertex.x - x, vertex.y - y)
+                val dot = vec.dot(direction)
+                val vecProjDir = Vector2(x + direction.x*dot, y + direction.y*dot)
+
+                val distToLine2 = dist2(vertex, vecProjDir)
+                if (distToLine2 > radius2) println("No collision should have happened," +
+                        " dist to line ${sqrt(distToLine2)} radius: $radius")
+                offset = sqrt(radius2 - distToLine2)
+                newPos.set(vecProjDir.x - direction.x*offset, vecProjDir.y - direction.y*offset)
+
+                val dir = Vector2(newPos.x - vertex.x, newPos.y - vertex.y)
+                val n1 = Vector2(normal.x + tg.x, normal.y + tg.y)
+                val n2 = n1.ortho()
+                normal = if (abs(dir.dot(n1)) > abs(dir.dot(n2))) n1 else n2
+            }
+            val movementCorrection = speed/60 - sqrt(dist2(pos, newPos))
+            moveTo(newPos)
+            bounce(normal)
+            move(direction.x*movementCorrection, direction.y*movementCorrection)
+//            speed = 0f
             return Pair(vertex, false)
         }
         return Pair(Vector2(), false)
